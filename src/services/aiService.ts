@@ -1,8 +1,14 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
+// Use a fallback for the API key to avoid crashes if the env var is missing during build
+const API_KEY = (process.env.GEMINI_API_KEY as string) || "";
+const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 export async function getMostImportantWork(query: string, language: string = "it"): Promise<string> {
+  if (!API_KEY) {
+    console.warn("GEMINI_API_KEY is not defined. AI features will be disabled.");
+    return query;
+  }
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -34,6 +40,7 @@ export async function getMostImportantWork(query: string, language: string = "it
 
 export async function getSearchSuggestions(query: string, language: string = "it"): Promise<string[]> {
   if (!query || query.length < 2) return [];
+  if (!API_KEY) return [];
   
   try {
     const response = await ai.models.generateContent({
