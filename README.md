@@ -1,20 +1,40 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Search Sync (Google Search Simulator)
 
-# Run and deploy your AI Studio app
+Un simulatore di ricerca Google sincronizzato in tempo reale.
 
-This contains everything you need to run your app locally.
+## Caratteristiche
+- 🔍 Ricerca Google Web e Immagini.
+- 🤖 Suggerimenti AI (Gemini) per i lavori più importanti di un argomento.
+- 🔄 Sincronizzazione in tempo reale tra diversi browser/dispositivi tramite Firebase.
+- ⚡️ Creato con React, Vite e Tailwind CSS.
 
-View your app in AI Studio: https://ai.studio/apps/45b7876d-7398-4a83-9f7b-2d724138b969
+## Distribuzione su Vercel
 
-## Run Locally
+Questo progetto è pronto per essere distribuito su Vercel tramite GitHub.
 
-**Prerequisites:**  Node.js
+### 1. Prerequisiti
+- Un account [GitHub](https://github.com).
+- Un account [Vercel](https://vercel.com).
+- Un account [Firebase](https://firebase.google.com) configurato (il file `firebase-applet-config.json` deve essere presente).
 
+### 2. Passaggi per il Deploy
+1. Carica questo codice in un repository GitHub.
+2. Vai su Vercel e clicca su **"Add New"** > **"Project"**.
+3. Importa il repository GitHub.
+4. **Configurazione Variabili di Ambiente (Environment Variables):**
+   Nella sezione "Environment Variables", aggiungi la seguente chiave:
+   - `GEMINI_API_KEY`: Inserisci la tua chiave API di Google Gemini (puoi ottenerla su [Google AI Studio](https://aistudio.google.com/app/apikey)).
+5. Clicca su **"Deploy"**.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 3. Configurazione Firebase
+Assicurati che `firebase-applet-config.json` sia incluso nel repository. In produzione, ricorda di:
+1. Abilitare l'autenticazione **Anonima** nella console Firebase.
+2. Abilitare **Cloud Firestore**.
+3. Configurare le regole di sicurezza di Firestore (usa il file `firestore.rules` incluso).
+4. Aggiungere il dominio di Vercel (es. `tuo-app.vercel.app`) ai domini autorizzati in **Authentication > Settings > Authorized domains**.
+
+## Sviluppo Locale
+```bash
+npm install
+npm run dev
+```
