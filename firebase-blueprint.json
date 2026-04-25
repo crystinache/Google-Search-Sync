@@ -1,0 +1,43 @@
+{
+  "entities": {
+    "SharedSearch": {
+      "title": "SharedSearch",
+      "description": "A shared search query between users.",
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The search query text."
+        },
+        "aiQuery": {
+          "type": "string",
+          "description": "The AI-expanded query text."
+        },
+        "timestamp": {
+          "type": "number",
+          "description": "The time the query was created."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who created the query."
+        },
+        "uniqueId": {
+          "type": "string",
+          "description": "A unique ID for the query to prevent duplicate processing."
+        },
+        "searchType": {
+          "type": "string",
+          "description": "The type of search executed (web or images).",
+          "enum": ["web", "images"]
+        }
+      },
+      "required": ["query", "timestamp", "userId", "uniqueId", "searchType"]
+    }
+  },
+  "firestore": {
+    "/artifacts/{appId}/public/data/shared_search/latest_query": {
+      "schema": "SharedSearch",
+      "description": "The latest shared search query."
+    }
+  }
+}

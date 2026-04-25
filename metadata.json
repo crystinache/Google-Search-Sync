@@ -1,0 +1,6 @@
+{
+  "name": "Google Search Sync",
+  "description": "A synchronized Google Search simulator that allows real-time query sharing between users using Firebase.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
