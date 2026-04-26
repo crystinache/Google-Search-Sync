@@ -83,9 +83,21 @@ export default function App() {
   const [pendingData, setPendingData] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [appMode, setAppMode] = useState<'mirror' | 'ai'>('mirror');
+  const [appMode, setAppMode] = useState<'mirror' | 'ai'>(() => {
+    return (localStorage.getItem('appMode') as 'mirror' | 'ai') || 'mirror';
+  });
   const [showSecretMenu, setShowSecretMenu] = useState(false);
-  const [searchType, setSearchType] = useState<'web' | 'images'>('web');
+  const [searchType, setSearchType] = useState<'web' | 'images'>(() => {
+    return (localStorage.getItem('searchType') as 'web' | 'images') || 'web';
+  });
+  
+  useEffect(() => {
+    localStorage.setItem('appMode', appMode);
+  }, [appMode]);
+
+  useEffect(() => {
+    localStorage.setItem('searchType', searchType);
+  }, [searchType]);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const lastRedirectId = useRef<string | null>(null);
@@ -165,7 +177,7 @@ export default function App() {
       });
     });
     return () => unsubscribe();
-  }, [isAuthReady, user]);
+  }, [isAuthReady, user, appMode, searchType]);
 
   const handleSearch = async () => {
     if (!isAuthReady || !user || !query.trim()) return;
