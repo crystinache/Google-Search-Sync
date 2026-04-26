@@ -83,8 +83,8 @@ export default function App() {
   const [pendingData, setPendingData] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [appMode, setAppMode] = useState<'mirror' | 'ai'>(() => {
-    return (localStorage.getItem('appMode') as 'mirror' | 'ai') || 'mirror';
+  const [appMode, setAppMode] = useState<'mirror' | 'ai' | 'typing'>(() => {
+    return (localStorage.getItem('appMode') as 'mirror' | 'ai' | 'typing') || 'mirror';
   });
   const [showSecretMenu, setShowSecretMenu] = useState(false);
   const [searchType, setSearchType] = useState<'web' | 'images'>(() => {
@@ -106,6 +106,7 @@ export default function App() {
 
   const appId = "google-search-simulator"; 
   const SHARED_DOC_PATH = `artifacts/${appId}/public/data/shared_search/latest_query`;
+  const TYPING_DOC_PATH = `artifacts/${appId}/public/data/shared_search/typing`;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -176,8 +177,35 @@ export default function App() {
         isError: true 
       });
     });
-    return () => unsubscribe();
+    // 2. Real-time Typing listener
+    const typingDocRef = doc(db, TYPING_DOC_PATH);
+    const unsubscribeTyping = onSnapshot(typingDocRef, (docSnapshot) => {
+      if (appMode === 'typing' && docSnapshot.exists()) {
+        const typingData = docSnapshot.data();
+        if (typingData.userId !== user.uid) {
+          setQuery(typingData.text);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeTyping();
+    };
   }, [isAuthReady, user, appMode, searchType]);
+
+  const emitTyping = async (text: string) => {
+    if (!isAuthReady || !user) return;
+    try {
+      await setDoc(doc(db, TYPING_DOC_PATH), {
+        text,
+        userId: user.uid,
+        timestamp: Date.now()
+      });
+    } catch (e) {
+      // Silent error for typing
+    }
+  };
 
   const handleSearch = async () => {
     if (!isAuthReady || !user || !query.trim()) return;
@@ -339,7 +367,7 @@ export default function App() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                className="text-[56px] font-bold mb-8 select-none"
+                className="text-[56px] font-semibold mb-8 select-none"
               >
                 <span className="text-[#4285f4]">G</span>
                 <span className="text-[#ea4335]">o</span>
@@ -371,7 +399,11 @@ export default function App() {
                 ref={searchInputRef}
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setQuery(val);
+                  emitTyping(val);
+                }}
                 onFocus={() => {
                   setIsSearchActive(true);
                   if (suggestions.length > 0) setShowSuggestions(true);
@@ -413,6 +445,7 @@ export default function App() {
                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center space-x-3 text-sm text-gray-800"
                         onClick={() => {
                           setQuery(suggestion);
+                          emitTyping(suggestion);
                           setShowSuggestions(false);
                           setTimeout(async () => {
                             const trimmedSuggestion = suggestion.trim();
@@ -555,6 +588,24 @@ export default function App() {
                     <p className="text-xs text-gray-500 group-hover:text-gray-400">Riceve un output elaborato dall'AI</p>
                   </div>
                   {appMode === 'ai' && <div className="w-4 h-4 bg-[#1a73e8] rounded-full shadow-[0_0_8px_rgba(26,115,232,0.6)]" />}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setAppMode('typing');
+                    setShowSecretMenu(false);
+                  }}
+                  className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between group ${
+                    appMode === 'typing' 
+                      ? 'border-[#1a73e8] bg-blue-50 text-[#1a73e8]' 
+                      : 'border-gray-100 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-left">
+                    <p className="font-bold">Real time typing</p>
+                    <p className="text-xs text-gray-500 group-hover:text-gray-400">Riceve le lettere in tempo reale</p>
+                  </div>
+                  {appMode === 'typing' && <div className="w-4 h-4 bg-[#1a73e8] rounded-full shadow-[0_0_8px_rgba(26,115,232,0.6)]" />}
                 </button>
               </div>
 
