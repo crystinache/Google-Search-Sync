@@ -99,6 +99,52 @@ export default function App() {
     localStorage.setItem('searchType', searchType);
   }, [searchType]);
   
+  const [wakeLock, setWakeLock] = useState<any>(null);
+  const [isWakeLockActive, setIsWakeLockActive] = useState(false);
+
+  const requestWakeLock = async () => {
+    if ('wakeLock' in navigator) {
+      try {
+        const lock = await (navigator as any).wakeLock.request('screen');
+        setWakeLock(lock);
+        setIsWakeLockActive(true);
+        
+        lock.addEventListener('release', () => {
+          setWakeLock(null);
+          setIsWakeLockActive(false);
+        });
+      } catch (err: any) {
+        console.error(`${err.name}, ${err.message}`);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const handleInteraction = () => {
+      requestWakeLock();
+    };
+
+    document.addEventListener('mousedown', handleInteraction);
+    document.addEventListener('touchstart', handleInteraction);
+    document.addEventListener('keydown', handleInteraction);
+
+    return () => {
+      document.removeEventListener('mousedown', handleInteraction);
+      document.removeEventListener('touchstart', handleInteraction);
+      document.removeEventListener('keydown', handleInteraction);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (wakeLock !== null && document.visibilityState === 'visible') {
+        await requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [wakeLock]);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const lastRedirectId = useRef<string | null>(null);
   const lastHandledSyncId = useRef<string | null>(null);
@@ -342,8 +388,17 @@ export default function App() {
             </div>
 
             <div className="flex items-center space-x-5">
-              <button className="p-1 rounded-full hover:bg-gray-100 transition duration-150">
-                <Grid className="w-5 h-5 text-gray-600" />
+              <button className="p-1.5 rounded-full hover:bg-gray-100 transition duration-150 flex items-center justify-center">
+                <div className="grid grid-cols-3 gap-0.5 p-0.5">
+                  {[...Array(9)].map((_, i) => (
+                    <div 
+                      key={i} 
+                      className={`w-1 h-1 rounded-full transition-colors duration-500 ${
+                        i === 4 && isWakeLockActive ? 'bg-black' : 'bg-gray-400'
+                      }`} 
+                    />
+                  ))}
+                </div>
               </button>
               <button 
                 onDoubleClick={() => setShowSecretMenu(true)}
