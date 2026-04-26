@@ -144,15 +144,8 @@ export default function App() {
         
         if (!isFromMe && isNew) {
           lastHandledSyncId.current = data.uniqueId;
-          setSyncMessage({ 
-            text: `Sincronizzazione automatica per: "${data.query}"...`, 
-            isError: false 
-          });
-          
-          // Small delay to allow user to see what's happening before opening tab
-          setTimeout(() => {
-            autoExecuteRemoteQuery(data);
-          }, 1500);
+          // Esecuzione immediata senza messaggi visivi per massima fluidità
+          autoExecuteRemoteQuery(data);
         }
       } else {
         setPendingData(null);
@@ -179,19 +172,13 @@ export default function App() {
 
     const currentQueryText = query.trim();
     
-    // 1. Immediate redirection for the sender
+    // 1. Immediate redirection for the sender (direct location change to avoid any popup block)
     const encodedQuery = encodeURIComponent(currentQueryText);
     const googleUrl = searchType === 'images' 
       ? `https://www.google.com/search?q=${encodedQuery}&tbm=isch` 
       : `https://www.google.com/search?q=${encodedQuery}`;
-    window.open(googleUrl, '_blank');
     
-    // 2. Reset UI state immediately
-    setIsSearchActive(false);
-    setQuery(''); // Clear the search bar immediately
-    searchInputRef.current?.blur();
-
-    // 3. Perform AI analysis and database write silently in the background
+    // 2. Perform AI analysis and database write silently in the background
     try {
       const processSearch = async () => {
         let aiQuery = currentQueryText;
@@ -214,39 +201,34 @@ export default function App() {
         await setDoc(doc(db, SHARED_DOC_PATH), data);
       };
 
-      processSearch().catch(e => {
-        handleFirestoreError(e, OperationType.WRITE, SHARED_DOC_PATH);
-      });
+      // We need to trigger the redirect AFTER we've at least started the write process
+      // But for the best UX, we redirect immediately.
+      // Firestore writes are very fast, so we'll start it and then redirect.
+      processSearch();
+      
+      // Shortest possible delay to ensure the firestore call is dispatched
+      setTimeout(() => {
+        window.location.href = googleUrl;
+      }, 100);
+
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, SHARED_DOC_PATH);
+      window.location.href = googleUrl;
     }
   };
 
-  // Auto execution logic
+  // Auto execution logic via Direct Double-Device Redirect
   const autoExecuteRemoteQuery = async (data: any) => {
-    const { query: originalQuery, aiQuery, searchType: remoteSearchType } = data;
+    const { aiQuery, searchType: remoteSearchType } = data;
     const encodedAiQuery = encodeURIComponent(aiQuery);
     const googleUrl = remoteSearchType === 'images'
       ? `https://www.google.com/search?q=${encodedAiQuery}&tbm=isch`
       : `https://www.google.com/search?q=${encodedAiQuery}`;
     
-    // Attempt to open. Might be blocked by modern browsers if not user-initiated.
-    const newWindow = window.open(googleUrl, '_blank');
+    // Redirect current page immediately
+    window.location.href = googleUrl;
     
-    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-      setSyncMessage({ 
-        text: `Pop-up bloccato! Abilita i pop-up per "${data.query}" per la sincronizzazione automatica.`, 
-        isError: true 
-      });
-    } else {
-      setSyncMessage({ 
-        text: `Sincronizzato: "${originalQuery}" -> "${aiQuery}"`, 
-        isError: false 
-      });
-      setTimeout(() => setSyncMessage(null), 3000);
-    }
-    
-    // Clean up from DB
+    // Clean up from DB (optional since we are leaving the page)
     try {
       await deleteDoc(doc(db, SHARED_DOC_PATH));
     } catch (e) {
@@ -419,17 +401,12 @@ export default function App() {
                           setQuery(suggestion);
                           setShowSuggestions(false);
                           setTimeout(async () => {
-                            // Execute handleSearch logic with the suggestion
                             const trimmedSuggestion = suggestion.trim();
                             const encodedQuery = encodeURIComponent(trimmedSuggestion);
                             const googleUrl = searchType === 'images'
                               ? `https://www.google.com/search?q=${encodedQuery}&tbm=isch`
                               : `https://www.google.com/search?q=${encodedQuery}`;
-                            window.open(googleUrl, '_blank');
-                            setIsSearchActive(false);
-                            setQuery('');
                             
-                            // Silent part
                             try {
                               let aiQuery = trimmedSuggestion;
                               if (appMode === 'ai') {
@@ -450,7 +427,10 @@ export default function App() {
                             } catch (e) {
                               console.error("Silent sync error:", e);
                             }
-                          }, 0);
+
+                            // Redirect
+                            window.location.href = googleUrl;
+                          }, 100);
                         }}
                       >
                         <Search className="w-4 h-4 text-gray-400" />
