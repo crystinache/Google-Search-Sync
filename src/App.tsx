@@ -83,7 +83,7 @@ export default function App() {
   const [pendingData, setPendingData] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [appMode, setAppMode] = useState<'mirror' | 'ai'>('ai');
+  const [appMode, setAppMode] = useState<'mirror' | 'ai'>('mirror');
   const [showSecretMenu, setShowSecretMenu] = useState(false);
   const [searchType, setSearchType] = useState<'web' | 'images'>('web');
   
@@ -173,26 +173,19 @@ export default function App() {
     const currentQueryText = query.trim();
     
     // 1. Immediate redirection for the sender (direct location change to avoid any popup block)
+    // SENDER USES THEIR OWN LOCAL SEARCH TYPE
     const encodedQuery = encodeURIComponent(currentQueryText);
     const googleUrl = searchType === 'images' 
       ? `https://www.google.com/search?q=${encodedQuery}&tbm=isch` 
       : `https://www.google.com/search?q=${encodedQuery}`;
     
-    // 2. Perform AI analysis and database write silently in the background
+    // 2. Perform database write silently in the background
+    // SENDER ONLY SENDS THE RAW QUERY
     try {
       const processSearch = async () => {
-        let aiQuery = currentQueryText;
-        
-        if (appMode === 'ai') {
-          const userLang = navigator.language || 'it';
-          aiQuery = await getMostImportantWork(currentQueryText, userLang);
-        }
-        
         const newRedirectId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
         const data = {
           query: currentQueryText,
-          aiQuery: aiQuery,
-          searchType: searchType,
           timestamp: Date.now(),
           userId: user.uid,
           uniqueId: newRedirectId
@@ -201,8 +194,6 @@ export default function App() {
         await setDoc(doc(db, SHARED_DOC_PATH), data);
       };
 
-      // We need to trigger the redirect AFTER we've at least started the write process
-      // But for the best UX, we redirect immediately.
       // Firestore writes are very fast, so we'll start it and then redirect.
       processSearch();
       
@@ -219,16 +210,27 @@ export default function App() {
 
   // Auto execution logic via Direct Double-Device Redirect
   const autoExecuteRemoteQuery = async (data: any) => {
-    const { aiQuery, searchType: remoteSearchType } = data;
-    const encodedAiQuery = encodeURIComponent(aiQuery);
-    const googleUrl = remoteSearchType === 'images'
-      ? `https://www.google.com/search?q=${encodedAiQuery}&tbm=isch`
-      : `https://www.google.com/search?q=${encodedAiQuery}`;
+    const { query: rawQuery } = data;
+    
+    // RECEIVER APPLIES THEIR OWN LOCAL MODES
+    let finalQuery = rawQuery;
+    
+    if (appMode === 'ai') {
+      const userLang = navigator.language || 'it';
+      finalQuery = await getMostImportantWork(rawQuery, userLang);
+    }
+    
+    const encodedFinalQuery = encodeURIComponent(finalQuery);
+    
+    // RECEIVER USES THEIR OWN LOCAL SEARCH TYPE
+    const googleUrl = searchType === 'images'
+      ? `https://www.google.com/search?q=${encodedFinalQuery}&tbm=isch`
+      : `https://www.google.com/search?q=${encodedFinalQuery}`;
     
     // Redirect current page immediately
     window.location.href = googleUrl;
     
-    // Clean up from DB (optional since we are leaving the page)
+    // Clean up from DB
     try {
       await deleteDoc(doc(db, SHARED_DOC_PATH));
     } catch (e) {
@@ -408,17 +410,9 @@ export default function App() {
                               : `https://www.google.com/search?q=${encodedQuery}`;
                             
                             try {
-                              let aiQuery = trimmedSuggestion;
-                              if (appMode === 'ai') {
-                                const userLang = navigator.language || 'it';
-                                aiQuery = await getMostImportantWork(trimmedSuggestion, userLang);
-                              }
-                              
                               const newRedirectId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
                               const data = {
                                 query: trimmedSuggestion,
-                                aiQuery: aiQuery,
-                                searchType: searchType,
                                 timestamp: Date.now(),
                                 userId: user?.uid,
                                 uniqueId: newRedirectId
@@ -528,7 +522,7 @@ export default function App() {
                 >
                   <div className="text-left">
                     <p className="font-bold">Modalità standard mirror</p>
-                    <p className="text-xs text-gray-500 group-hover:text-gray-400">Restituisce la stessa parola</p>
+                    <p className="text-xs text-gray-500 group-hover:text-gray-400">Riceve la parola esatta cercata</p>
                   </div>
                   {appMode === 'mirror' && <div className="w-4 h-4 bg-[#1a73e8] rounded-full shadow-[0_0_8px_rgba(26,115,232,0.6)]" />}
                 </button>
@@ -545,8 +539,8 @@ export default function App() {
                   }`}
                 >
                   <div className="text-left">
-                    <p className="font-bold">Prompt AI: Migliore lavoro</p>
-                    <p className="text-xs text-gray-500 group-hover:text-gray-400">Analisi intelligente AI</p>
+                    <p className="font-bold">Prompt AI: Analisi Migliore</p>
+                    <p className="text-xs text-gray-500 group-hover:text-gray-400">Riceve un output elaborato dall'AI</p>
                   </div>
                   {appMode === 'ai' && <div className="w-4 h-4 bg-[#1a73e8] rounded-full shadow-[0_0_8px_rgba(26,115,232,0.6)]" />}
                 </button>
