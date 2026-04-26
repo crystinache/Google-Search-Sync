@@ -136,7 +136,18 @@ export default function App() {
 
     const handleDataChange = (data: any) => {
       if (data) {
+        // Only ignore if it's our own search AND we just sent it (within last few seconds)
+        // This allows seeing our own search if we refresh, but prevents auto-opening what we just sent.
+        const isFromMe = data.userId === user.uid;
+        
         setPendingData(data);
+        
+        if (!isFromMe) {
+          setSyncMessage({ 
+            text: `Ricerca in arrivo: "${data.query}" - Clicca per sincronizzare`, 
+            isError: false 
+          });
+        }
       } else {
         setPendingData(null);
         setSyncMessage(null);
@@ -148,8 +159,11 @@ export default function App() {
     const unsubscribe = onSnapshot(sharedDocRef, (docSnapshot) => {
       handleDataChange(docSnapshot.exists() ? docSnapshot.data() : null);
     }, (error) => {
-      handleFirestoreError(error, OperationType.GET, SHARED_DOC_PATH);
-      setSyncMessage({ text: `Sync Error: ${error.message}`, isError: true });
+      const errInfo = handleFirestoreError(error, OperationType.GET, SHARED_DOC_PATH);
+      setSyncMessage({ 
+        text: `Errore Firestore: ${error.message}. Verifica di aver aggiunto il dominio di Vercel su Firebase Console.`, 
+        isError: true 
+      });
     });
     return () => unsubscribe();
   }, [isAuthReady, user]);
@@ -423,12 +437,18 @@ export default function App() {
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`flex flex-col items-center gap-2 font-medium ${syncMessage.isError ? 'text-red-500' : 'text-green-600'}`}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl ${
+                  syncMessage.isError ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600 cursor-pointer'
+                }`}
+                onClick={() => !syncMessage.isError && simulateRemoteQuery()}
               >
-                {!syncMessage.isError && syncMessage.text.includes('AI') && (
-                  <Sparkles className="w-5 h-5 animate-pulse text-amber-500" />
+                {!syncMessage.isError && (
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 animate-pulse text-amber-500" />
+                    <span className="font-bold underline">SINCRONIZZA ORA</span>
+                  </div>
                 )}
-                <p>{syncMessage.text}</p>
+                <p className="text-center">{syncMessage.text}</p>
               </motion.div>
             )}
           </div>
