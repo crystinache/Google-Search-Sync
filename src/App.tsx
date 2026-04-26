@@ -366,12 +366,13 @@ export default function App() {
             className="w-full max-w-[480px] mx-auto flex justify-between items-center px-3 py-3 border-b border-gray-100 bg-white"
           >
             <div className="flex items-center space-x-6">
-              <Menu className="w-6 h-6 text-gray-500 cursor-pointer" />
               <div className="flex space-x-6">
                 <button 
                   onClick={() => setSearchType('web')}
                   className={`text-xs font-medium border-b-2 transition-all pb-1 ${
-                    searchType === 'web' ? 'border-[#1a73e8] text-[#1a73e8]' : 'border-transparent text-gray-700 hover:text-gray-900'
+                    isLoading 
+                      ? 'border-transparent text-black' 
+                      : (searchType === 'web' ? 'border-[#1a73e8] text-[#1a73e8]' : 'border-transparent text-gray-700 hover:text-gray-900')
                   }`}
                 >
                   TUTTI
@@ -539,12 +540,6 @@ export default function App() {
 
           {/* STATUS MESSAGES */}
           <div className="mt-8 text-center text-sm min-h-[24px]">
-            {isLoading && (
-              <div className="flex items-center justify-center space-x-2">
-                <div className="w-5 h-5 border-2 border-gray-200 border-t-[#1a73e8] rounded-full animate-spin"></div>
-                <span className="text-[#1a73e8] font-medium">Caricamento...</span>
-              </div>
-            )}
             {syncMessage && (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
