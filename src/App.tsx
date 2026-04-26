@@ -339,7 +339,7 @@ export default function App() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                className="text-[56px] font-normal mb-8 select-none"
+                className="text-[56px] font-bold mb-8 select-none"
               >
                 <span className="text-[#4285f4]">G</span>
                 <span className="text-[#ea4335]">o</span>
