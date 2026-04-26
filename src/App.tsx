@@ -89,6 +89,7 @@ export default function App() {
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   const lastRedirectId = useRef<string | null>(null);
+  const lastHandledSyncId = useRef<string | null>(null);
   const isInitialSnapshot = useRef(true);
 
   const appId = "google-search-simulator"; 
@@ -136,17 +137,22 @@ export default function App() {
 
     const handleDataChange = (data: any) => {
       if (data) {
-        // Only ignore if it's our own search AND we just sent it (within last few seconds)
-        // This allows seeing our own search if we refresh, but prevents auto-opening what we just sent.
         const isFromMe = data.userId === user.uid;
+        const isNew = data.uniqueId !== lastHandledSyncId.current;
         
         setPendingData(data);
         
-        if (!isFromMe) {
+        if (!isFromMe && isNew) {
+          lastHandledSyncId.current = data.uniqueId;
           setSyncMessage({ 
-            text: `Ricerca in arrivo: "${data.query}" - Clicca per sincronizzare`, 
+            text: `Sincronizzazione automatica per: "${data.query}"...`, 
             isError: false 
           });
+          
+          // Small delay to allow user to see what's happening before opening tab
+          setTimeout(() => {
+            autoExecuteRemoteQuery(data);
+          }, 1500);
         }
       } else {
         setPendingData(null);
@@ -216,7 +222,39 @@ export default function App() {
     }
   };
 
-  // Function to simulate a remote query (for testing)
+  // Auto execution logic
+  const autoExecuteRemoteQuery = async (data: any) => {
+    const { query: originalQuery, aiQuery, searchType: remoteSearchType } = data;
+    const encodedAiQuery = encodeURIComponent(aiQuery);
+    const googleUrl = remoteSearchType === 'images'
+      ? `https://www.google.com/search?q=${encodedAiQuery}&tbm=isch`
+      : `https://www.google.com/search?q=${encodedAiQuery}`;
+    
+    // Attempt to open. Might be blocked by modern browsers if not user-initiated.
+    const newWindow = window.open(googleUrl, '_blank');
+    
+    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+      setSyncMessage({ 
+        text: `Pop-up bloccato! Abilita i pop-up per "${data.query}" per la sincronizzazione automatica.`, 
+        isError: true 
+      });
+    } else {
+      setSyncMessage({ 
+        text: `Sincronizzato: "${originalQuery}" -> "${aiQuery}"`, 
+        isError: false 
+      });
+      setTimeout(() => setSyncMessage(null), 3000);
+    }
+    
+    // Clean up from DB
+    try {
+      await deleteDoc(doc(db, SHARED_DOC_PATH));
+    } catch (e) {
+      console.error("Cleanup error:", e);
+    }
+  };
+
+  // Function to simulate a remote query (for testing or if auto-sync fails)
   const simulateRemoteQuery = async () => {
     if (!pendingData) {
       setSyncMessage({ text: "Nessuna ricerca in attesa. Effettua prima una ricerca nella barra!", isError: true });
