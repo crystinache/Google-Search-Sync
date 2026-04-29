@@ -285,12 +285,12 @@ export default function App() {
       
       // Shortest possible delay to ensure the firestore call is dispatched
       setTimeout(() => {
-        window.location.href = googleUrl;
+        window.location.replace(googleUrl);
       }, 100);
 
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, SHARED_DOC_PATH);
-      window.location.href = googleUrl;
+      window.location.replace(googleUrl);
     }
   };
 
@@ -314,7 +314,7 @@ export default function App() {
       : `https://www.google.com/search?q=${encodedFinalQuery}`;
     
     // Redirect current page immediately
-    window.location.href = googleUrl;
+    window.location.replace(googleUrl);
     
     // Clean up from DB
     try {
@@ -524,7 +524,7 @@ export default function App() {
                             }
 
                             // Redirect
-                            window.location.href = googleUrl;
+                            window.location.replace(googleUrl);
                           }, 100);
                         }}
                       >
