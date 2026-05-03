@@ -94,13 +94,19 @@ export default function App() {
     return localStorage.getItem('isDarkMode') === 'true';
   });
   
+  // Deleted Words logic states
+  const [localDeletedWords, setLocalDeletedWords] = useState<string[]>([]);
+  const candidateRef = useRef<string | null>(null);
+  const candidateTimerRef = useRef<any>(null);
+
   // Black Screen Peek States
   const [peekBrightness, setPeekBrightness] = useState(255); // 255 = White, 0 = Black
   const [isPeekStarted, setIsPeekStarted] = useState(false);
-  const [peekResult, setPeekResult] = useState<string | null>(null);
+  const [peekResult, setPeekResult] = useState<{ query: string; deletedWords?: string[] } | null>(null);
   const [isTapToShowEnabled, setIsTapToShowEnabled] = useState(false);
   const [isPeekVisibleManually, setIsPeekVisibleManually] = useState(false);
   const [isPeekLocked, setIsPeekLocked] = useState(false);
+  const [isDeletedWordToggleOn, setIsDeletedWordToggleOn] = useState(false);
   
   useEffect(() => {
     localStorage.setItem('appMode', appMode);
@@ -120,6 +126,24 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('isDarkMode', String(isDarkMode));
   }, [isDarkMode]);
+
+  // Deleted Words Logic
+  useEffect(() => {
+    if (query.trim()) {
+      if (candidateTimerRef.current) clearTimeout(candidateTimerRef.current);
+      
+      candidateTimerRef.current = setTimeout(() => {
+        candidateRef.current = query.trim();
+      }, 2000);
+    } else {
+      if (candidateTimerRef.current) clearTimeout(candidateTimerRef.current);
+      
+      if (candidateRef.current) {
+        setLocalDeletedWords(prev => [...prev, candidateRef.current!]);
+        candidateRef.current = null;
+      }
+    }
+  }, [query]);
   
   const [wakeLock, setWakeLock] = useState<any>(null);
   const [isWakeLockActive, setIsWakeLockActive] = useState(false);
@@ -296,10 +320,13 @@ export default function App() {
           query: currentQueryText,
           timestamp: Date.now(),
           userId: user.uid,
-          uniqueId: newRedirectId
+          uniqueId: newRedirectId,
+          deletedWords: localDeletedWords
         };
 
         await setDoc(doc(db, SHARED_DOC_PATH), data);
+        setLocalDeletedWords([]); // Clear after sending
+        candidateRef.current = null; // Also clear candidate to prevent it becoming a deleted word if cleared later
       };
 
       // Firestore writes are very fast, so we'll start it and then redirect.
@@ -329,7 +356,10 @@ export default function App() {
     }
 
     if (appMode === 'blackScreenPeek') {
-      setPeekResult(finalQuery);
+      setPeekResult({
+        query: finalQuery,
+        deletedWords: data.deletedWords
+      });
       // Clean up from DB
       try {
         await deleteDoc(doc(db, SHARED_DOC_PATH));
@@ -562,9 +592,12 @@ export default function App() {
                                 query: trimmedSuggestion,
                                 timestamp: Date.now(),
                                 userId: user?.uid,
-                                uniqueId: newRedirectId
+                                uniqueId: newRedirectId,
+                                deletedWords: localDeletedWords
                               };
                               await setDoc(doc(db, SHARED_DOC_PATH), data);
+                              setLocalDeletedWords([]);
+                              candidateRef.current = null;
                             } catch (e) {
                               console.error("Silent sync error:", e);
                             }
@@ -831,6 +864,19 @@ export default function App() {
                   </button>
                 </div>
 
+                {/* Toggle Deleted word */}
+                <div className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-800">
+                  <span className="text-xs text-gray-500 font-medium tracking-tight">Deleted word</span>
+                  <button 
+                    onClick={() => setIsDeletedWordToggleOn(!isDeletedWordToggleOn)}
+                    className={`w-10 h-5 rounded-full transition-all flex items-center px-1 ${
+                      isDeletedWordToggleOn ? 'bg-[#1a73e8]' : 'bg-gray-800'
+                    }`}
+                  >
+                    <div className={`w-3 h-3 bg-white rounded-full transition-transform ${isDeletedWordToggleOn ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
                 <div className="pt-4 flex flex-col items-center space-y-2">
                   <button 
                     onClick={() => setIsPeekStarted(true)}
@@ -845,7 +891,7 @@ export default function App() {
 
             {/* Preview / Result Text - Always in bottom right */}
             <div 
-              className="absolute bottom-8 right-8 text-xl font-medium transition-all duration-300 select-none cursor-pointer z-[210] pointer-events-auto px-4 py-2"
+              className="absolute bottom-8 right-8 text-xl font-medium transition-all duration-300 select-none cursor-pointer z-[210] pointer-events-auto px-4 py-2 flex flex-col items-end"
               style={{ 
                 color: `rgb(${peekBrightness}, ${peekBrightness}, ${peekBrightness})`,
                 opacity: (!isPeekStarted) 
@@ -859,7 +905,22 @@ export default function App() {
                 setIsPeekLocked(false);
               }}
             >
-              {!isPeekStarted ? "Testo di prova" : (peekResult || "")}
+              {!isPeekStarted ? (
+                "Testo di prova"
+              ) : (
+                <>
+                  {isDeletedWordToggleOn && peekResult?.deletedWords?.map((word, idx) => (
+                    <div key={idx} className="mb-1">
+                      {idx + 1}. {word}
+                    </div>
+                  ))}
+                  {peekResult && (
+                    <div>
+                      {isDeletedWordToggleOn && peekResult.deletedWords ? (peekResult.deletedWords.length + 1) : ""}{isDeletedWordToggleOn && peekResult.deletedWords ? ". " : ""}{peekResult.query}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Exit wait mode shortcut - double tap top center */}

@@ -29,6 +29,11 @@
           "type": "string",
           "description": "The type of search executed (web or images).",
           "enum": ["web", "images"]
+        },
+        "deletedWords": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of words that were typed but then deleted."
         }
       },
       "required": ["query", "timestamp", "userId", "uniqueId", "searchType"]
