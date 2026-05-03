@@ -24,14 +24,13 @@ service cloud.firestore {
     }
 
     function isValidSearch(data) {
-      return data.keys().hasAll(['query', 'aiQuery', 'searchType', 'timestamp', 'userId', 'uniqueId']) &&
-             data.keys().hasOnly(['query', 'aiQuery', 'searchType', 'timestamp', 'userId', 'uniqueId']) &&
+      return data.keys().hasAll(['query', 'timestamp', 'userId', 'uniqueId']) &&
              data.query is string && data.query.size() <= 500 &&
-             data.aiQuery is string && data.aiQuery.size() <= 500 &&
-             data.searchType is string && (data.searchType == 'web' || data.searchType == 'images') &&
              data.timestamp is number &&
              data.userId is string && data.userId == request.auth.uid &&
-             data.uniqueId is string && data.uniqueId.size() <= 100;
+             data.uniqueId is string && data.uniqueId.size() <= 100 &&
+             (!data.keys().contains('searchType') || (data.searchType is string && (data.searchType == 'web' || data.searchType == 'images'))) &&
+             (!data.keys().contains('deletedWords') || (data.deletedWords is list && data.deletedWords.size() <= 20));
     }
 
     // ===============================================================

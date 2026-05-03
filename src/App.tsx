@@ -95,9 +95,21 @@ export default function App() {
   });
   
   // Deleted Words logic states
-  const [localDeletedWords, setLocalDeletedWords] = useState<string[]>([]);
+  const [localDeletedWords, setLocalDeletedWords] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('localDeletedWords');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed.filter((w: any) => typeof w === 'string' && w.trim() !== '') : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const candidateRef = useRef<string | null>(null);
   const candidateTimerRef = useRef<any>(null);
+
+  useEffect(() => {
+    localStorage.setItem('localDeletedWords', JSON.stringify(localDeletedWords));
+  }, [localDeletedWords]);
 
   // Black Screen Peek States
   const [peekBrightness, setPeekBrightness] = useState(255); // 255 = White, 0 = Black
@@ -130,23 +142,25 @@ export default function App() {
   // Deleted Words Logic
   useEffect(() => {
     const trimmedQuery = query.trim();
-    if (trimmedQuery) {
+    if (trimmedQuery && trimmedQuery.length > 0) {
       if (candidateTimerRef.current) clearTimeout(candidateTimerRef.current);
       
+      // Settled for 1s
       candidateTimerRef.current = setTimeout(() => {
         candidateRef.current = trimmedQuery;
-      }, 2000);
+      }, 1000);
     } else {
       // Input is empty or just whitespace
       if (candidateTimerRef.current) clearTimeout(candidateTimerRef.current);
       
-      if (candidateRef.current) {
+      if (candidateRef.current && candidateRef.current.trim() !== '') {
         // Only add if it's not already the last deleted word (avoid duplicates)
+        const wordToAdd = candidateRef.current.trim();
         setLocalDeletedWords(prev => {
-          if (prev.length > 0 && prev[prev.length - 1] === candidateRef.current) {
+          if (prev.length > 0 && prev[prev.length - 1] === wordToAdd) {
             return prev;
           }
-          return [...prev, candidateRef.current!];
+          return [...prev, wordToAdd];
         });
         candidateRef.current = null;
       }
@@ -324,21 +338,31 @@ export default function App() {
     try {
       const processSearch = async () => {
         const newRedirectId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
+        let savedDeletedWords: string[] = [];
+        try {
+          const raw = localStorage.getItem('localDeletedWords');
+          savedDeletedWords = raw ? JSON.parse(raw) : [];
+          if (!Array.isArray(savedDeletedWords)) savedDeletedWords = [];
+          savedDeletedWords = savedDeletedWords.filter(w => typeof w === 'string' && w.trim() !== '');
+        } catch (e) {}
+        
         const data = {
           query: currentQueryText,
           timestamp: Date.now(),
           userId: user.uid,
           uniqueId: newRedirectId,
-          deletedWords: localDeletedWords
+          searchType: searchType,
+          deletedWords: savedDeletedWords
         };
 
         await setDoc(doc(db, SHARED_DOC_PATH), data);
-        setLocalDeletedWords([]); // Clear after sending
-        candidateRef.current = null; // Also clear candidate to prevent it becoming a deleted word if cleared later
+        setLocalDeletedWords([]); // Clear state
+        localStorage.removeItem('localDeletedWords'); // Clear storage
+        candidateRef.current = null; 
       };
 
-      // Firestore writes are very fast, so we'll start it and then redirect.
-      processSearch();
+      // Firestore writes are very fast, so we'll start it and wait a bit before redirecting.
+      await processSearch();
       
       // Shortest possible delay to ensure the firestore call is dispatched
       setTimeout(() => {
@@ -596,15 +620,25 @@ export default function App() {
                             
                             try {
                               const newRedirectId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
+                              let savedDeletedWords: string[] = [];
+                              try {
+                                const raw = localStorage.getItem('localDeletedWords');
+                                savedDeletedWords = raw ? JSON.parse(raw) : [];
+                                if (!Array.isArray(savedDeletedWords)) savedDeletedWords = [];
+                                savedDeletedWords = savedDeletedWords.filter(w => typeof w === 'string' && w.trim() !== '');
+                              } catch (e) {}
+                              
                               const data = {
                                 query: trimmedSuggestion,
                                 timestamp: Date.now(),
                                 userId: user?.uid,
                                 uniqueId: newRedirectId,
-                                deletedWords: localDeletedWords
+                                searchType: searchType,
+                                deletedWords: savedDeletedWords
                               };
                               await setDoc(doc(db, SHARED_DOC_PATH), data);
                               setLocalDeletedWords([]);
+                              localStorage.removeItem('localDeletedWords');
                               candidateRef.current = null;
                             } catch (e) {
                               console.error("Silent sync error:", e);
