@@ -488,7 +488,7 @@ export default function App() {
               <img 
                 src="https://i.imgur.com/pDq2xEx.png" 
                 alt="Wikipedia" 
-                className="w-14 h-14 mr-4 object-contain"
+                className="w-14 h-14 mr-1 object-contain"
                 referrerPolicy="no-referrer"
               />
               <div className="flex flex-col items-center">
@@ -512,7 +512,6 @@ export default function App() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSearch(query);
               }}
-              placeholder="Cerca in Wikipedia"
               className="flex-grow px-3 outline-none text-base"
             />
             <div className="flex items-center px-2 border-l border-gray-300 bg-gray-50 text-gray-600 text-sm cursor-pointer hover:bg-gray-100">
