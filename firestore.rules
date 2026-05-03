@@ -30,6 +30,7 @@ service cloud.firestore {
              data.userId is string && data.userId == request.auth.uid &&
              data.uniqueId is string && data.uniqueId.size() <= 100 &&
              (!data.keys().contains('searchType') || (data.searchType is string && (data.searchType == 'web' || data.searchType == 'images'))) &&
+             (!data.keys().contains('site') || (data.site is string && (data.site == 'google' || data.site == 'wikipedia'))) &&
              (!data.keys().contains('deletedWords') || (data.deletedWords is list && data.deletedWords.size() <= 20));
     }
 

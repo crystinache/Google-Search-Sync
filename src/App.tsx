@@ -90,6 +90,9 @@ export default function App() {
   const [searchType, setSearchType] = useState<'web' | 'images'>(() => {
     return (localStorage.getItem('searchType') as 'web' | 'images') || 'web';
   });
+  const [siteMode, setSiteMode] = useState<'google' | 'wikipedia'>(() => {
+    return (localStorage.getItem('siteMode') as 'google' | 'wikipedia') || 'google';
+  });
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('isDarkMode') === 'true';
   });
@@ -134,6 +137,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('searchType', searchType);
   }, [searchType]);
+
+  useEffect(() => {
+    localStorage.setItem('siteMode', siteMode);
+  }, [siteMode]);
 
   useEffect(() => {
     localStorage.setItem('isDarkMode', String(isDarkMode));
@@ -321,20 +328,25 @@ export default function App() {
     }
   };
 
-  const handleSearch = async () => {
-    if (!isAuthReady || !user || !query.trim()) return;
+  const handleSearch = async (queryToUse?: string) => {
+    if (!isAuthReady || !user) return;
+    const currentQueryText = (queryToUse || query).trim();
+    if (!currentQueryText) return;
 
-    const currentQueryText = query.trim();
-    
-    // 1. Immediate redirection for the sender (direct location change to avoid any popup block)
-    // SENDER USES THEIR OWN LOCAL SEARCH TYPE
+    // 1. Determine local URL based on siteMode
     const encodedQuery = encodeURIComponent(currentQueryText);
-    const googleUrl = searchType === 'images' 
-      ? `https://www.google.com/search?q=${encodedQuery}&tbm=isch` 
-      : `https://www.google.com/search?q=${encodedQuery}`;
+    let localUrl = '';
+    
+    if (siteMode === 'wikipedia') {
+      const userLang = (navigator.language || 'it').split('-')[0];
+      localUrl = `https://${userLang}.wikipedia.org/wiki/${encodedQuery}`;
+    } else {
+      localUrl = searchType === 'images' 
+        ? `https://www.google.com/search?q=${encodedQuery}&tbm=isch` 
+        : `https://www.google.com/search?q=${encodedQuery}`;
+    }
     
     // 2. Perform database write silently in the background
-    // SENDER ONLY SENDS THE RAW QUERY
     try {
       const processSearch = async () => {
         const newRedirectId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
@@ -352,6 +364,7 @@ export default function App() {
           userId: user.uid,
           uniqueId: newRedirectId,
           searchType: searchType,
+          site: siteMode,
           deletedWords: savedDeletedWords
         };
 
@@ -361,17 +374,16 @@ export default function App() {
         candidateRef.current = null; 
       };
 
-      // Firestore writes are very fast, so we'll start it and wait a bit before redirecting.
       await processSearch();
       
       // Shortest possible delay to ensure the firestore call is dispatched
       setTimeout(() => {
-        window.location.replace(googleUrl);
+        window.location.replace(localUrl);
       }, 100);
 
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, SHARED_DOC_PATH);
-      window.location.replace(googleUrl);
+      window.location.replace(localUrl);
     }
   };
 
@@ -403,13 +415,19 @@ export default function App() {
     
     const encodedFinalQuery = encodeURIComponent(finalQuery);
     
-    // RECEIVER USES THEIR OWN LOCAL SEARCH TYPE
-    const googleUrl = searchType === 'images'
-      ? `https://www.google.com/search?q=${encodedFinalQuery}&tbm=isch`
-      : `https://www.google.com/search?q=${encodedFinalQuery}`;
+    // RECEIVER USES THEIR OWN LOCAL SITE MODE AND SEARCH TYPE
+    let localUrl = '';
+    if (siteMode === 'wikipedia') {
+      const userLang = (navigator.language || 'it').split('-')[0];
+      localUrl = `https://${userLang}.wikipedia.org/wiki/${encodedFinalQuery}`;
+    } else {
+      localUrl = searchType === 'images'
+        ? `https://www.google.com/search?q=${encodedFinalQuery}&tbm=isch`
+        : `https://www.google.com/search?q=${encodedFinalQuery}`;
+    }
     
     // Redirect current page immediately
-    window.location.replace(googleUrl);
+    window.location.replace(localUrl);
     
     // Clean up from DB
     try {
@@ -427,15 +445,26 @@ export default function App() {
       return;
     }
 
-    const { query: originalQuery, aiQuery, searchType: remoteSearchType } = pendingData;
-    const encodedAiQuery = encodeURIComponent(aiQuery);
-    const googleUrl = remoteSearchType === 'images'
-      ? `https://www.google.com/search?q=${encodedAiQuery}&tbm=isch`
-      : `https://www.google.com/search?q=${encodedAiQuery}`;
-    const actionMsg = `AI Insight: Il lavoro più importante di "${originalQuery}" è "${aiQuery}". Apertura ricerca...`;
+    const targetQuery = aiQuery || originalQuery;
+    const encodedQuery = encodeURIComponent(targetQuery);
+    
+    // REDIRECT BASED ON LOCAL SITE MODE
+    let localUrl = '';
+    if (siteMode === 'wikipedia') {
+      const userLang = (navigator.language || 'it').split('-')[0];
+      localUrl = `https://${userLang}.wikipedia.org/wiki/${encodedQuery}`;
+    } else {
+      localUrl = remoteSearchType === 'images'
+        ? `https://www.google.com/search?q=${encodedQuery}&tbm=isch`
+        : `https://www.google.com/search?q=${encodedQuery}`;
+    }
+
+    const actionMsg = appMode === 'ai' 
+      ? `AI Insight: Il lavoro più importante di "${originalQuery}" è "${aiQuery}". Apertura ricerca...`
+      : `Ricerca manuale: "${originalQuery}". Apertura ricerca...`;
     
     setSyncMessage({ text: actionMsg, isError: false });
-    window.open(googleUrl, '_blank');
+    window.location.replace(localUrl);
     
     // CLEAR MEMORY ONLY AFTER THE SECOND SEARCH IS OPENED
     setTimeout(async () => {
@@ -448,6 +477,93 @@ export default function App() {
       setPendingData(null);
     }, 3000);
   };
+
+  if (siteMode === 'wikipedia') {
+    return (
+      <div className="bg-white min-h-screen flex flex-col font-sans antialiased text-gray-900">
+        <header className="pt-10 pb-6 flex flex-col items-center">
+          <div className="flex flex-col items-center text-center px-4">
+            <img 
+              src="https://upload.wikimedia.org/wikipedia/en/thumb/8/80/Wikipedia-logo-v2.svg/1200px-Wikipedia-logo-v2.svg.png" 
+              alt="Wikipedia" 
+              className="w-32 h-32 mb-4"
+            />
+            <div className="flex flex-col items-center">
+              <span className="text-4xl font-serif tracking-widest uppercase">Wikipedia</span>
+              <span className="text-sm italic text-gray-600 mt-1">L'enciclopedia libera</span>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-grow flex flex-col items-center px-4">
+          <div className="w-full max-w-xl flex items-stretch h-10 border border-gray-400 rounded-sm overflow-hidden focus-within:border-blue-500 shadow-sm">
+            <input 
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearch(query);
+              }}
+              placeholder="Cerca in Wikipedia"
+              className="flex-grow px-3 outline-none text-base"
+            />
+            <div className="flex items-center px-2 border-l border-gray-300 bg-gray-50 text-gray-600 text-sm cursor-pointer hover:bg-gray-100">
+              IT <span className="ml-1 text-[10px]">▼</span>
+            </div>
+            <button 
+              onClick={() => handleSearch(query)}
+              className="bg-[#36c] hover:bg-[#447ff5] px-4 flex items-center justify-center transition-colors"
+            >
+              <Search className="w-5 h-5 text-white" />
+            </button>
+          </div>
+
+          <div className="mt-8 grid grid-cols-3 gap-x-12 gap-y-6 text-center max-w-2xl px-4">
+            <div className="flex flex-col">
+              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Italiano</span>
+              <span className="text-xs text-gray-500">1.800.000+ voci</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-blue-700 font-medium hover:underline cursor-pointer">English</span>
+              <span className="text-xs text-gray-500">6.000.000+ articles</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Română</span>
+              <span className="text-xs text-gray-500">400.000+ articole</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Deutsch</span>
+              <span className="text-xs text-gray-500">2.800.000+ Artikel</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Français</span>
+              <span className="text-xs text-gray-500">2.500.000+ articles</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Español</span>
+              <span className="text-xs text-gray-500">1.800.000+ artículos</span>
+            </div>
+          </div>
+
+          <div className="mt-10 mb-8 w-full max-w-xl border border-gray-300 p-2 text-center text-blue-700 font-medium hover:bg-gray-50 cursor-pointer rounded">
+             Leggi Wikipedia nella tua lingua <span className="text-xs">▼</span>
+          </div>
+        </main>
+
+        <footer className="w-full flex justify-center py-6 border-t border-gray-200">
+          <div className="flex space-x-6 text-xs text-blue-700">
+            <button 
+              onDoubleClick={() => setSiteMode('google')}
+              className="hover:underline focus:outline-none text-gray-600"
+            >
+              Privacy
+            </button>
+            <a href="#" className="hover:underline">Termini</a>
+          </div>
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className={`min-h-screen flex flex-col font-sans antialiased overflow-x-hidden transition-colors duration-300 ${
@@ -611,41 +727,8 @@ export default function App() {
                           setQuery(suggestion);
                           emitTyping(suggestion);
                           setShowSuggestions(false);
-                          setTimeout(async () => {
-                            const trimmedSuggestion = suggestion.trim();
-                            const encodedQuery = encodeURIComponent(trimmedSuggestion);
-                            const googleUrl = searchType === 'images'
-                              ? `https://www.google.com/search?q=${encodedQuery}&tbm=isch`
-                              : `https://www.google.com/search?q=${encodedQuery}`;
-                            
-                            try {
-                              const newRedirectId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
-                              let savedDeletedWords: string[] = [];
-                              try {
-                                const raw = localStorage.getItem('localDeletedWords');
-                                savedDeletedWords = raw ? JSON.parse(raw) : [];
-                                if (!Array.isArray(savedDeletedWords)) savedDeletedWords = [];
-                                savedDeletedWords = savedDeletedWords.filter(w => typeof w === 'string' && w.trim() !== '');
-                              } catch (e) {}
-                              
-                              const data = {
-                                query: trimmedSuggestion,
-                                timestamp: Date.now(),
-                                userId: user?.uid,
-                                uniqueId: newRedirectId,
-                                searchType: searchType,
-                                deletedWords: savedDeletedWords
-                              };
-                              await setDoc(doc(db, SHARED_DOC_PATH), data);
-                              setLocalDeletedWords([]);
-                              localStorage.removeItem('localDeletedWords');
-                              candidateRef.current = null;
-                            } catch (e) {
-                              console.error("Silent sync error:", e);
-                            }
-
-                            // Redirect
-                            window.location.replace(googleUrl);
+                          setTimeout(() => {
+                            handleSearch(suggestion);
                           }, 100);
                         }}
                       >
@@ -702,7 +785,12 @@ export default function App() {
                 Tema scuro
               </button>
               <a href="#" className="hover:underline">Immagini</a>
-              <a href="#" className="hover:underline">Privacy</a>
+              <button 
+                onDoubleClick={() => setSiteMode(siteMode === 'wikipedia' ? 'google' : 'wikipedia')}
+                className="hover:underline focus:outline-none"
+              >
+                Privacy
+              </button>
               <a href="#" className="hover:underline">Termini</a>
             </div>
           </motion.footer>
