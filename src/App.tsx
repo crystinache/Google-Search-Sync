@@ -95,6 +95,9 @@ export default function App() {
   const [peekBrightness, setPeekBrightness] = useState(255); // 255 = White, 0 = Black
   const [isPeekStarted, setIsPeekStarted] = useState(false);
   const [peekResult, setPeekResult] = useState<string | null>(null);
+  const [isTapToShowEnabled, setIsTapToShowEnabled] = useState(false);
+  const [isPeekVisibleManually, setIsPeekVisibleManually] = useState(false);
+  const [isPeekLocked, setIsPeekLocked] = useState(false);
   
   useEffect(() => {
     localStorage.setItem('appMode', appMode);
@@ -102,6 +105,8 @@ export default function App() {
     if (appMode !== 'blackScreenPeek') {
       setIsPeekStarted(false);
       setPeekResult(null);
+      setIsPeekVisibleManually(false);
+      setIsPeekLocked(false);
     }
   }, [appMode]);
 
@@ -716,7 +721,24 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center overflow-hidden"
+            className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center overflow-hidden touch-none"
+            onTouchStart={(e) => {
+              if (!isPeekStarted || !isTapToShowEnabled) return;
+              const touchY = e.touches[0].clientY;
+              const screenHeight = window.innerHeight;
+              if (touchY < screenHeight * 0.9) {
+                // Top 90%
+                setIsPeekVisibleManually(true);
+              } else {
+                // Bottom 10% - LOCK
+                setIsPeekVisibleManually(true);
+                setIsPeekLocked(true);
+              }
+            }}
+            onTouchEnd={() => {
+              if (!isPeekStarted || !isTapToShowEnabled || isPeekLocked) return;
+              setIsPeekVisibleManually(false);
+            }}
           >
             {/* Exit button - always visible except when explicitly hidden for maximum stealth if needed */}
             {!isPeekStarted && (
@@ -752,9 +774,32 @@ export default function App() {
                   />
                 </div>
 
+                {/* Toggle Tocca per mostrare */}
+                <div className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-800">
+                  <span className="text-xs text-gray-500 font-medium tracking-tight">Tocca per mostrare</span>
+                  <button 
+                    onClick={() => setIsTapToShowEnabled(!isTapToShowEnabled)}
+                    className={`w-10 h-5 rounded-full transition-all flex items-center px-1 ${
+                      isTapToShowEnabled ? 'bg-[#1a73e8]' : 'bg-gray-800'
+                    }`}
+                  >
+                    <div className={`w-3 h-3 bg-white rounded-full transition-transform ${isTapToShowEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
                 <div className="pt-4 flex flex-col items-center space-y-2">
                   <button 
-                    onClick={() => setIsPeekStarted(true)}
+                    onClick={() => {
+                      setIsPeekStarted(true);
+                      // Try to go fullscreen
+                      try {
+                        if (document.documentElement.requestFullscreen) {
+                          document.documentElement.requestFullscreen();
+                        }
+                      } catch (err) {
+                        console.error("Fullscreen error", err);
+                      }
+                    }}
                     className="bg-transparent border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-gray-200 px-8 py-2 rounded-full text-xs font-bold tracking-[0.2em] transition-all uppercase"
                   >
                     START
@@ -767,7 +812,12 @@ export default function App() {
             {/* Preview / Result Text - Always in bottom right */}
             <div 
               className="absolute bottom-8 right-8 text-xl font-medium transition-all duration-300 pointer-events-none select-none"
-              style={{ color: `rgb(${peekBrightness}, ${peekBrightness}, ${peekBrightness})` }}
+              style={{ 
+                color: `rgb(${peekBrightness}, ${peekBrightness}, ${peekBrightness})`,
+                opacity: (!isPeekStarted) 
+                  ? 1 
+                  : (isTapToShowEnabled ? (isPeekVisibleManually ? 1 : 0) : 1)
+              }}
             >
               {!isPeekStarted ? "Testo di prova" : (peekResult || "")}
             </div>
@@ -775,10 +825,18 @@ export default function App() {
             {/* Exit wait mode shortcut - double tap top center */}
             {isPeekStarted && (
               <div 
-                className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-16 bg-transparent"
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-20 bg-transparent z-[210] pointer-events-auto"
                 onDoubleClick={() => {
                   setIsPeekStarted(false);
                   setPeekResult(null);
+                  setIsPeekVisibleManually(false);
+                  setIsPeekLocked(false);
+                  // Try to exit fullscreen
+                  try {
+                    if (document.exitFullscreen) {
+                      document.exitFullscreen();
+                    }
+                  } catch (e) {}
                 }}
               />
             )}
