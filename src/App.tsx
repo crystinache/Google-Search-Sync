@@ -445,6 +445,7 @@ export default function App() {
       return;
     }
 
+    const { query: originalQuery, aiQuery, searchType: remoteSearchType } = pendingData;
     const targetQuery = aiQuery || originalQuery;
     const encodedQuery = encodeURIComponent(targetQuery);
     
@@ -459,7 +460,7 @@ export default function App() {
         : `https://www.google.com/search?q=${encodedQuery}`;
     }
 
-    const actionMsg = appMode === 'ai' 
+    const actionMsg = appMode === 'ai' && aiQuery
       ? `AI Insight: Il lavoro più importante di "${originalQuery}" è "${aiQuery}". Apertura ricerca...`
       : `Ricerca manuale: "${originalQuery}". Apertura ricerca...`;
     
@@ -483,14 +484,21 @@ export default function App() {
       <div className="bg-white min-h-screen flex flex-col font-sans antialiased text-gray-900">
         <header className="pt-10 pb-6 flex flex-col items-center">
           <div className="flex flex-col items-center text-center px-4">
-            <img 
-              src="https://upload.wikimedia.org/wikipedia/en/thumb/8/80/Wikipedia-logo-v2.svg/1200px-Wikipedia-logo-v2.svg.png" 
-              alt="Wikipedia" 
-              className="w-32 h-32 mb-4"
-            />
-            <div className="flex flex-col items-center">
-              <span className="text-4xl font-serif tracking-widest uppercase">Wikipedia</span>
-              <span className="text-sm italic text-gray-600 mt-1">L'enciclopedia libera</span>
+            <div className="flex items-center">
+              <img 
+                src="https://i.imgur.com/pDq2xEx.png" 
+                alt="Wikipedia" 
+                className="w-16 h-16 mr-4 object-contain"
+                referrerPolicy="no-referrer"
+              />
+              <div className="flex flex-col items-center">
+                <div className="flex items-baseline font-serif tracking-[0.10em] text-gray-900">
+                  <span className="text-5xl leading-none">W</span>
+                  <span className="text-3xl leading-none">IKIPEDI</span>
+                  <span className="text-5xl leading-none">A</span>
+                </div>
+                <div className="text-xs italic text-gray-600 mt-1 tracking-widest uppercase">The Free Encyclopedia</div>
+              </div>
             </div>
           </div>
         </header>
