@@ -83,16 +83,26 @@ export default function App() {
   const [pendingData, setPendingData] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [appMode, setAppMode] = useState<'mirror' | 'ai' | 'typing'>(() => {
-    return (localStorage.getItem('appMode') as 'mirror' | 'ai' | 'typing') || 'mirror';
+  const [appMode, setAppMode] = useState<'mirror' | 'ai' | 'typing' | 'blackScreenPeek'>(() => {
+    return (localStorage.getItem('appMode') as 'mirror' | 'ai' | 'typing' | 'blackScreenPeek') || 'mirror';
   });
   const [showSecretMenu, setShowSecretMenu] = useState(false);
   const [searchType, setSearchType] = useState<'web' | 'images'>(() => {
     return (localStorage.getItem('searchType') as 'web' | 'images') || 'web';
   });
   
+  // Black Screen Peek States
+  const [peekBrightness, setPeekBrightness] = useState(255); // 255 = White, 0 = Black
+  const [isPeekStarted, setIsPeekStarted] = useState(false);
+  const [peekResult, setPeekResult] = useState<string | null>(null);
+  
   useEffect(() => {
     localStorage.setItem('appMode', appMode);
+    // Reset peek states when changing mode
+    if (appMode !== 'blackScreenPeek') {
+      setIsPeekStarted(false);
+      setPeekResult(null);
+    }
   }, [appMode]);
 
   useEffect(() => {
@@ -304,6 +314,17 @@ export default function App() {
     if (appMode === 'ai') {
       const userLang = navigator.language || 'it';
       finalQuery = await getMostImportantWork(rawQuery, userLang);
+    }
+
+    if (appMode === 'blackScreenPeek') {
+      setPeekResult(finalQuery);
+      // Clean up from DB
+      try {
+        await deleteDoc(doc(db, SHARED_DOC_PATH));
+      } catch (e) {
+        console.error("Cleanup error:", e);
+      }
+      return; // Stop here, no redirect
     }
     
     const encodedFinalQuery = encodeURIComponent(finalQuery);
@@ -657,6 +678,24 @@ export default function App() {
                   </div>
                   {appMode === 'typing' && <div className="w-4 h-4 bg-[#1a73e8] rounded-full shadow-[0_0_8px_rgba(26,115,232,0.6)]" />}
                 </button>
+
+                <button
+                  onClick={() => {
+                    setAppMode('blackScreenPeek');
+                    setShowSecretMenu(false);
+                  }}
+                  className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between group ${
+                    appMode === 'blackScreenPeek' 
+                      ? 'border-[#1a73e8] bg-blue-50 text-[#1a73e8]' 
+                      : 'border-gray-100 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-left">
+                    <p className="font-bold">Black screen Peek</p>
+                    <p className="text-xs text-gray-500 group-hover:text-gray-400">Riceve la parola su schermo nero</p>
+                  </div>
+                  {appMode === 'blackScreenPeek' && <div className="w-4 h-4 bg-[#1a73e8] rounded-full shadow-[0_0_8px_rgba(26,115,232,0.6)]" />}
+                </button>
               </div>
 
               <button
@@ -667,6 +706,83 @@ export default function App() {
               </button>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* BLACK SCREEN PEEK OVERLAY */}
+      <AnimatePresence>
+        {appMode === 'blackScreenPeek' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center overflow-hidden"
+          >
+            {/* Exit button - always visible except when explicitly hidden for maximum stealth if needed */}
+            {!isPeekStarted && (
+              <button 
+                onClick={() => setAppMode('mirror')}
+                className="absolute top-6 right-6 text-gray-600 hover:text-gray-400 transition-colors"
+              >
+                Chiudi Modalità
+              </button>
+            )}
+
+            {/* Slider and Setup UI - Only visible if Peek hasn't started */}
+            {!isPeekStarted && (
+              <div className="flex flex-col items-center space-y-8 w-full max-w-sm px-6">
+                <h3 className="text-gray-500 text-sm font-medium uppercase tracking-widest">
+                  Configurazione Peek
+                </h3>
+                
+                <div className="w-full flex flex-col items-center space-y-4">
+                  <div className="flex justify-between w-full text-[10px] text-gray-600 font-mono">
+                    <span>BIANCO</span>
+                    <span>GRIGIO</span>
+                    <span>NERO</span>
+                  </div>
+                  <input 
+                    type="range"
+                    min="0"
+                    max="255"
+                    step="1"
+                    value={255 - peekBrightness} // Mirroring for left=white, right=black
+                    onChange={(e) => setPeekBrightness(255 - parseInt(e.target.value))}
+                    className="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-[#1a73e8]"
+                  />
+                </div>
+
+                <div className="pt-4 flex flex-col items-center space-y-2">
+                  <button 
+                    onClick={() => setIsPeekStarted(true)}
+                    className="bg-transparent border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-gray-200 px-8 py-2 rounded-full text-xs font-bold tracking-[0.2em] transition-all uppercase"
+                  >
+                    START
+                  </button>
+                  <p className="text-[10px] text-gray-700 italic">Clicca START per entrare in attesa</p>
+                </div>
+              </div>
+            )}
+
+            {/* Preview / Result Text - Always in bottom right */}
+            <div 
+              className="absolute bottom-8 right-8 text-xl font-medium transition-all duration-300 pointer-events-none select-none"
+              style={{ color: `rgb(${peekBrightness}, ${peekBrightness}, ${peekBrightness})` }}
+            >
+              {!isPeekStarted ? "Testo di prova" : (peekResult || "")}
+            </div>
+
+            {/* Exit wait mode shortcut - double tap top center */}
+            {isPeekStarted && (
+              <div 
+                className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-16 bg-transparent"
+                onDoubleClick={() => {
+                  setIsPeekStarted(false);
+                  setPeekResult(null);
+                }}
+              />
+            )}
+          </motion.div>
         )}
       </AnimatePresence>
 
