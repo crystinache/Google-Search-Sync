@@ -488,16 +488,16 @@ export default function App() {
               <img 
                 src="https://i.imgur.com/pDq2xEx.png" 
                 alt="Wikipedia" 
-                className="w-16 h-16 mr-4 object-contain"
+                className="w-14 h-14 mr-4 object-contain"
                 referrerPolicy="no-referrer"
               />
               <div className="flex flex-col items-center">
                 <div className="flex items-baseline font-serif tracking-[0.10em] text-gray-900">
-                  <span className="text-5xl leading-none">W</span>
-                  <span className="text-3xl leading-none">IKIPEDI</span>
-                  <span className="text-5xl leading-none">A</span>
+                  <span className="text-4xl leading-none">W</span>
+                  <span className="text-2xl leading-none">IKIPEDI</span>
+                  <span className="text-4xl leading-none">A</span>
                 </div>
-                <div className="text-xs italic text-gray-600 mt-1 tracking-widest uppercase">The Free Encyclopedia</div>
+                <div className="text-[10px] italic text-gray-600 mt-1 tracking-widest uppercase">The Free Encyclopedia</div>
               </div>
             </div>
           </div>
@@ -553,8 +553,37 @@ export default function App() {
             </div>
           </div>
 
-          <div className="mt-10 mb-8 w-full max-w-xl border border-gray-300 p-2 text-center text-blue-700 font-medium hover:bg-gray-50 cursor-pointer rounded">
+          <div className="mt-10 w-full max-w-xl border border-gray-300 p-2 text-center text-blue-700 font-medium hover:bg-gray-50 cursor-pointer rounded">
              Leggi Wikipedia nella tua lingua <span className="text-xs">▼</span>
+          </div>
+
+          <div className="mt-4 mb-12 w-full max-w-xl grid grid-cols-2 gap-x-12 text-sm text-blue-700 px-4">
+            <div className="flex flex-col space-y-1.5 items-start">
+              <span className="hover:underline cursor-pointer">Polski</span>
+              <span className="hover:underline cursor-pointer">Português</span>
+              <span className="hover:underline cursor-pointer">Русский</span>
+              <span className="hover:underline cursor-pointer">日本語</span>
+              <span className="hover:underline cursor-pointer">中文</span>
+              <span className="hover:underline cursor-pointer">Tiếng Việt</span>
+              <span className="hover:underline cursor-pointer">Svenska</span>
+              <span className="hover:underline cursor-pointer">Nederlands</span>
+              <span className="hover:underline cursor-pointer">한국어</span>
+              <span className="hover:underline cursor-pointer">Català</span>
+              <span className="hover:underline cursor-pointer">العربية</span>
+            </div>
+            <div className="flex flex-col space-y-1.5 items-start">
+              <span className="hover:underline cursor-pointer">Norsk (Bokmål)</span>
+              <span className="hover:underline cursor-pointer">Suomi</span>
+              <span className="hover:underline cursor-pointer">Magyar</span>
+              <span className="hover:underline cursor-pointer">Čeština</span>
+              <span className="hover:underline cursor-pointer">Türkçe</span>
+              <span className="hover:underline cursor-pointer">Română</span>
+              <span className="hover:underline cursor-pointer">Simple English</span>
+              <span className="hover:underline cursor-pointer">Esperanto</span>
+              <span className="hover:underline cursor-pointer">Српски / Srpski</span>
+              <span className="hover:underline cursor-pointer">Dansk</span>
+              <span className="hover:underline cursor-pointer">עברית</span>
+            </div>
           </div>
         </main>
 
