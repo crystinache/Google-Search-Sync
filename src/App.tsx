@@ -688,6 +688,14 @@ export default function App() {
                   onClick={() => {
                     setAppMode('blackScreenPeek');
                     setShowSecretMenu(false);
+                    // Force fullscreen immediately on mode selection (user gesture)
+                    try {
+                      if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen();
+                      }
+                    } catch (err) {
+                      console.error("Fullscreen error", err);
+                    }
                   }}
                   className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between group ${
                     appMode === 'blackScreenPeek' 
@@ -743,7 +751,15 @@ export default function App() {
             {/* Exit button - always visible except when explicitly hidden for maximum stealth if needed */}
             {!isPeekStarted && (
               <button 
-                onClick={() => setAppMode('mirror')}
+                onClick={() => {
+                  setAppMode('mirror');
+                  // Exit fullscreen only here
+                  try {
+                    if (document.exitFullscreen) {
+                      document.exitFullscreen();
+                    }
+                  } catch (e) {}
+                }}
                 className="absolute top-6 right-6 text-gray-600 hover:text-gray-400 transition-colors"
               >
                 Chiudi Modalità
@@ -789,17 +805,7 @@ export default function App() {
 
                 <div className="pt-4 flex flex-col items-center space-y-2">
                   <button 
-                    onClick={() => {
-                      setIsPeekStarted(true);
-                      // Try to go fullscreen
-                      try {
-                        if (document.documentElement.requestFullscreen) {
-                          document.documentElement.requestFullscreen();
-                        }
-                      } catch (err) {
-                        console.error("Fullscreen error", err);
-                      }
-                    }}
+                    onClick={() => setIsPeekStarted(true)}
                     className="bg-transparent border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-gray-200 px-8 py-2 rounded-full text-xs font-bold tracking-[0.2em] transition-all uppercase"
                   >
                     START
@@ -811,12 +817,18 @@ export default function App() {
 
             {/* Preview / Result Text - Always in bottom right */}
             <div 
-              className="absolute bottom-8 right-8 text-xl font-medium transition-all duration-300 pointer-events-none select-none"
+              className="absolute bottom-8 right-8 text-xl font-medium transition-all duration-300 select-none cursor-pointer z-[210] pointer-events-auto px-4 py-2"
               style={{ 
                 color: `rgb(${peekBrightness}, ${peekBrightness}, ${peekBrightness})`,
                 opacity: (!isPeekStarted) 
                   ? 1 
                   : (isTapToShowEnabled ? (isPeekVisibleManually ? 1 : 0) : 1)
+              }}
+              onDoubleClick={() => {
+                setIsPeekStarted(false);
+                setPeekResult(null);
+                setIsPeekVisibleManually(false);
+                setIsPeekLocked(false);
               }}
             >
               {!isPeekStarted ? "Testo di prova" : (peekResult || "")}
@@ -831,12 +843,6 @@ export default function App() {
                   setPeekResult(null);
                   setIsPeekVisibleManually(false);
                   setIsPeekLocked(false);
-                  // Try to exit fullscreen
-                  try {
-                    if (document.exitFullscreen) {
-                      document.exitFullscreen();
-                    }
-                  } catch (e) {}
                 }}
               />
             )}
