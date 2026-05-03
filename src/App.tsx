@@ -129,17 +129,25 @@ export default function App() {
 
   // Deleted Words Logic
   useEffect(() => {
-    if (query.trim()) {
+    const trimmedQuery = query.trim();
+    if (trimmedQuery) {
       if (candidateTimerRef.current) clearTimeout(candidateTimerRef.current);
       
       candidateTimerRef.current = setTimeout(() => {
-        candidateRef.current = query.trim();
+        candidateRef.current = trimmedQuery;
       }, 2000);
     } else {
+      // Input is empty or just whitespace
       if (candidateTimerRef.current) clearTimeout(candidateTimerRef.current);
       
       if (candidateRef.current) {
-        setLocalDeletedWords(prev => [...prev, candidateRef.current!]);
+        // Only add if it's not already the last deleted word (avoid duplicates)
+        setLocalDeletedWords(prev => {
+          if (prev.length > 0 && prev[prev.length - 1] === candidateRef.current) {
+            return prev;
+          }
+          return [...prev, candidateRef.current!];
+        });
         candidateRef.current = null;
       }
     }
@@ -908,18 +916,26 @@ export default function App() {
               {!isPeekStarted ? (
                 "Testo di prova"
               ) : (
-                <>
-                  {isDeletedWordToggleOn && peekResult?.deletedWords?.map((word, idx) => (
-                    <div key={idx} className="mb-1">
-                      {idx + 1}. {word}
-                    </div>
-                  ))}
-                  {peekResult && (
+                peekResult && (
+                  <div className="flex flex-col items-end">
+                    {/* Show deleted words only if toggle is ON and they exist */}
+                    {isDeletedWordToggleOn && peekResult.deletedWords && peekResult.deletedWords.length > 0 && (
+                      peekResult.deletedWords.map((word, idx) => (
+                        <div key={`deleted-${idx}`} className="mb-1 opacity-80 italic">
+                          {idx + 1}. {word}
+                        </div>
+                      ))
+                    )}
+                    
+                    {/* Show final query */}
                     <div>
-                      {isDeletedWordToggleOn && peekResult.deletedWords ? (peekResult.deletedWords.length + 1) : ""}{isDeletedWordToggleOn && peekResult.deletedWords ? ". " : ""}{peekResult.query}
+                      {isDeletedWordToggleOn && peekResult.deletedWords && peekResult.deletedWords.length > 0 
+                        ? `${peekResult.deletedWords.length + 1}. ` 
+                        : isDeletedWordToggleOn ? "1. " : ""}
+                      {peekResult.query}
                     </div>
-                  )}
-                </>
+                  </div>
+                )
               )}
             </div>
 
