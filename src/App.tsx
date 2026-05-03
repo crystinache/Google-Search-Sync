@@ -16,7 +16,7 @@ import {
   onAuthStateChanged, 
   User 
 } from 'firebase/auth';
-import { Search, Mic, Menu, Grid, Info, Sparkles } from 'lucide-react';
+import { Search, Mic, Menu, Grid, Info, Sparkles, CircleUser } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, auth } from './firebase';
 import { getMostImportantWork, getSearchSuggestions } from './services/aiService';
@@ -90,6 +90,9 @@ export default function App() {
   const [searchType, setSearchType] = useState<'web' | 'images'>(() => {
     return (localStorage.getItem('searchType') as 'web' | 'images') || 'web';
   });
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    return localStorage.getItem('isDarkMode') === 'true';
+  });
   
   // Black Screen Peek States
   const [peekBrightness, setPeekBrightness] = useState(255); // 255 = White, 0 = Black
@@ -113,6 +116,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('searchType', searchType);
   }, [searchType]);
+
+  useEffect(() => {
+    localStorage.setItem('isDarkMode', String(isDarkMode));
+  }, [isDarkMode]);
   
   const [wakeLock, setWakeLock] = useState<any>(null);
   const [isWakeLockActive, setIsWakeLockActive] = useState(false);
@@ -381,7 +388,9 @@ export default function App() {
   };
 
   return (
-    <div className="bg-white min-h-screen flex flex-col font-sans antialiased overflow-x-hidden">
+    <div className={`min-h-screen flex flex-col font-sans antialiased overflow-x-hidden transition-colors duration-300 ${
+      isDarkMode ? 'bg-[#202124] text-[#e8eaed]' : 'bg-white text-gray-900'
+    }`}>
       {/* HEADER */}
       <AnimatePresence>
         {!isSearchActive && (
@@ -389,7 +398,9 @@ export default function App() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="w-full max-w-[480px] mx-auto flex justify-between items-center px-3 py-3 border-b border-gray-100 bg-white"
+            className={`w-full max-w-[480px] mx-auto flex justify-between items-center px-3 py-3 border-b transition-colors duration-300 ${
+              isDarkMode ? 'border-[#3c4043] bg-[#202124]' : 'border-gray-100 bg-white'
+            }`}
           >
             <div className="flex items-center space-x-6">
               <div className="flex space-x-6">
@@ -397,8 +408,11 @@ export default function App() {
                   onClick={() => setSearchType('web')}
                   className={`text-xs font-medium border-b-2 transition-all pb-1 ${
                     isLoading 
-                      ? 'border-transparent text-black' 
-                      : (searchType === 'web' ? 'border-[#1a73e8] text-[#1a73e8]' : 'border-transparent text-gray-700 hover:text-gray-900')
+                      ? 'border-transparent text-gray-400' 
+                      : (searchType === 'web' 
+                          ? (isDarkMode ? 'border-[#8ab4f8] text-[#8ab4f8]' : 'border-[#1a73e8] text-[#1a73e8]') 
+                          : (isDarkMode ? 'border-transparent text-[#9aa0a6] hover:text-[#e8eaed]' : 'border-transparent text-gray-700 hover:text-gray-900')
+                        )
                   }`}
                 >
                   TUTTI
@@ -406,7 +420,9 @@ export default function App() {
                 <button 
                   onClick={() => setSearchType('images')}
                   className={`text-xs font-medium border-b-2 transition-all pb-1 ${
-                    searchType === 'images' ? 'border-[#1a73e8] text-[#1a73e8]' : 'border-transparent text-gray-700 hover:text-gray-900'
+                    searchType === 'images' 
+                      ? (isDarkMode ? 'border-[#8ab4f8] text-[#8ab4f8]' : 'border-[#1a73e8] text-[#1a73e8]') 
+                      : (isDarkMode ? 'border-transparent text-[#9aa0a6] hover:text-[#e8eaed]' : 'border-transparent text-gray-700 hover:text-gray-900')
                   }`}
                 >
                   IMMAGINI
@@ -429,9 +445,9 @@ export default function App() {
               </button>
               <button 
                 onDoubleClick={() => setShowSecretMenu(true)}
-                className="bg-[#1a73e8] hover:bg-blue-600 text-white text-sm font-medium py-2 px-4 rounded transition duration-150 ease-in-out whitespace-nowrap"
+                className="w-8 h-8 rounded-full bg-[#1a73e8] hover:bg-blue-600 flex items-center justify-center transition duration-150 ease-in-out flex-shrink-0"
               >
-                registrati
+                <CircleUser className="w-5 h-5 text-white" />
               </button>
             </div>
           </motion.header>
@@ -467,16 +483,16 @@ export default function App() {
               isSearchActive 
                 ? 'fixed top-0 left-0 right-0 z-50 bg-white py-3 px-0 max-w-none' 
                 : 'relative max-w-md'
-            }`}
+            } ${isDarkMode && isSearchActive ? '!bg-[#202124]' : ''}`}
           >
             <div 
               className={`flex items-center border transition-all duration-200 ${
                 isSearchActive 
-                  ? 'border-b border-t-0 border-l-0 border-r-0 border-gray-300 rounded-none px-4 shadow-none' 
-                  : 'border-gray-200 rounded-full px-4 shadow-sm hover:shadow-md'
-              } h-11 bg-white`}
+                  ? `border-b border-t-0 border-l-0 border-r-0 ${isDarkMode ? 'border-[#5f6368]' : 'border-gray-300'} rounded-none px-4 shadow-none` 
+                  : `${isDarkMode ? 'border-[#5f6368] hover:bg-[#303134]' : 'border-gray-200 hover:shadow-md'} rounded-full px-4 shadow-sm`
+              } h-11 transition-colors duration-300 ${isDarkMode ? 'bg-[#202124]' : 'bg-white'}`}
             >
-              <Search className="w-5 h-5 text-gray-500 mr-3 flex-shrink-0" />
+              <Search className={`w-5 h-5 mr-3 flex-shrink-0 ${isDarkMode ? 'text-[#9aa0a6]' : 'text-gray-500'}`} />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -504,9 +520,9 @@ export default function App() {
                   }
                 }}
                 placeholder="Cerca su Google"
-                className="flex-grow text-lg outline-none bg-transparent h-full"
+                className={`flex-grow text-lg outline-none bg-transparent h-full ${isDarkMode ? 'text-[#e8eaed] placeholder-[#9aa0a6]' : 'text-gray-900'}`}
               />
-              <Mic className="w-5 h-5 text-gray-500 ml-3 cursor-pointer flex-shrink-0" />
+              <Mic className={`w-5 h-5 ml-3 cursor-pointer flex-shrink-0 ${isDarkMode ? 'text-[#8ab4f8]' : 'text-gray-500'}`} />
             </div>
 
             {/* SUGGESTIONS DROPDOWN */}
@@ -516,7 +532,9 @@ export default function App() {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className={`absolute left-0 right-0 bg-white border-x border-b border-gray-200 z-50 overflow-hidden ${
+                  className={`absolute left-0 right-0 border-x border-b z-50 overflow-hidden transition-colors duration-300 ${
+                    isDarkMode ? 'bg-[#202124] border-[#5f6368]' : 'bg-white border-gray-200'
+                  } ${
                     isSearchActive ? 'top-full' : 'rounded-b-2xl mt-[-1px] shadow-lg'
                   }`}
                 >
@@ -524,7 +542,9 @@ export default function App() {
                     {suggestions.map((suggestion, index) => (
                       <div
                         key={index}
-                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center space-x-3 text-sm text-gray-800"
+                        className={`px-4 py-2 cursor-pointer flex items-center space-x-3 text-sm transition-colors ${
+                          isDarkMode ? 'text-[#e8eaed] hover:bg-[#303134]' : 'text-gray-800 hover:bg-gray-100'
+                        }`}
                         onClick={() => {
                           setQuery(suggestion);
                           emitTyping(suggestion);
@@ -554,7 +574,7 @@ export default function App() {
                           }, 100);
                         }}
                       >
-                        <Search className="w-4 h-4 text-gray-400" />
+                        <Search className={`w-4 h-4 ${isDarkMode ? 'text-[#9aa0a6]' : 'text-gray-400'}`} />
                         <span>{suggestion}</span>
                       </div>
                     ))}
@@ -595,9 +615,17 @@ export default function App() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-0 left-0 right-0 w-full max-w-[480px] mx-auto bg-gray-50 p-4 border-t border-gray-200"
+            className={`fixed bottom-0 left-0 right-0 w-full max-w-[480px] mx-auto p-4 border-t transition-colors duration-300 ${
+              isDarkMode ? 'bg-[#171717] border-[#3c4043]' : 'bg-gray-50 border-gray-200'
+            }`}
           >
-            <div className="flex justify-center space-x-6 text-xs text-gray-700">
+            <div className={`flex justify-center space-x-6 text-xs ${isDarkMode ? 'text-[#9aa0a6]' : 'text-gray-700'}`}>
+              <button 
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="hover:underline focus:outline-none"
+              >
+                Tema scuro
+              </button>
               <a href="#" className="hover:underline">Immagini</a>
               <a href="#" className="hover:underline">Privacy</a>
               <a href="#" className="hover:underline">Termini</a>
