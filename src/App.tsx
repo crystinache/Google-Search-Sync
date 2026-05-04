@@ -549,48 +549,6 @@ export default function App() {
     }
   };
 
-  // Function to simulate a remote query (for testing or if auto-sync fails)
-  const simulateRemoteQuery = async () => {
-    if (!pendingData) {
-      setSyncMessage({ text: "Nessuna ricerca in attesa. Effettua prima una ricerca nella barra!", isError: true });
-      setTimeout(() => setSyncMessage(null), 3000);
-      return;
-    }
-
-    const { query: originalQuery, aiQuery, searchType: remoteSearchType } = pendingData;
-    const targetQuery = aiQuery || originalQuery;
-    const encodedQuery = encodeURIComponent(targetQuery);
-    
-    // REDIRECT BASED ON LOCAL SITE MODE
-    let localUrl = '';
-    if (siteMode === 'wikipedia') {
-      localUrl = `https://${lang}.wikipedia.org/wiki/${encodedQuery}`;
-    } else {
-      const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
-      localUrl = remoteSearchType === 'images'
-        ? `https://www.google.${googleDomain}/search?q=${encodedQuery}&tbm=isch`
-        : `https://www.google.${googleDomain}/search?q=${encodedQuery}`;
-    }
-
-    const actionMsg = appMode === 'ai' && aiQuery
-      ? `AI Insight: Il lavoro più importante di "${originalQuery}" è "${aiQuery}". Apertura ricerca...`
-      : `Ricerca manuale: "${originalQuery}". Apertura ricerca...`;
-    
-    setSyncMessage({ text: actionMsg, isError: false });
-    window.location.replace(localUrl);
-    
-    // CLEAR MEMORY ONLY AFTER THE SECOND SEARCH IS OPENED
-    setTimeout(async () => {
-      try {
-        await deleteDoc(doc(db, SHARED_DOC_PATH));
-      } catch (e) {
-        handleFirestoreError(e, OperationType.DELETE, SHARED_DOC_PATH);
-      }
-      setSyncMessage(null);
-      setPendingData(null);
-    }, 3000);
-  };
-
   if (siteMode === 'wikipedia') {
     return (
       <div className="bg-white min-h-screen flex flex-col font-sans antialiased text-gray-900">
@@ -927,28 +885,6 @@ export default function App() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
-
-          {/* STATUS MESSAGES */}
-          <div className="mt-8 text-center text-sm min-h-[24px]">
-            {syncMessage && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex flex-col items-center gap-2 p-4 rounded-xl ${
-                  syncMessage.isError ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600 cursor-pointer'
-                }`}
-                onClick={() => !syncMessage.isError && simulateRemoteQuery()}
-              >
-                {!syncMessage.isError && (
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 animate-pulse text-amber-500" />
-                    <span className="font-bold underline">SINCRONIZZA ORA</span>
-                  </div>
-                )}
-                <p className="text-center">{syncMessage.text}</p>
-              </motion.div>
-            )}
           </div>
         </div>
       </main>
