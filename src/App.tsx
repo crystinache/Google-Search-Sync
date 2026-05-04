@@ -304,7 +304,10 @@ export default function App() {
           setIsWakeLockActive(false);
         });
       } catch (err: any) {
-        console.error(`${err.name}, ${err.message}`);
+        // Silently fail if permissions policy prevents wake lock (common in iframes)
+        if (err.name !== 'NotAllowedError') {
+          console.warn(`WakeLock failed: ${err.name}, ${err.message}`);
+        }
       }
     }
   };
@@ -829,7 +832,14 @@ export default function App() {
               {isSearchActive ? (
                 <Search 
                   className={`w-5 h-5 ml-3 cursor-pointer flex-shrink-0 ${isDarkMode ? 'text-[#8ab4f8]' : 'text-gray-500'}`} 
-                  onClick={() => query.trim() !== "" && handleSearchSubmit(new Event('submit') as any)}
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // Prevent input onBlur from closing search before we can handle the search
+                    if (query.trim() !== "") {
+                      handleSearch();
+                      setShowSuggestions(false);
+                      setIsSearchActive(false);
+                    }
+                  }}
                 />
               ) : (
                 <Mic className={`w-5 h-5 ml-3 cursor-pointer flex-shrink-0 ${isDarkMode ? 'text-[#8ab4f8]' : 'text-gray-500'}`} />
