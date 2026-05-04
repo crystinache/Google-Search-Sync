@@ -447,7 +447,6 @@ export default function App() {
   };
 
   const handleSearch = async (queryToUse?: string) => {
-    if (!isAuthReady || !user) return;
     const currentQueryText = (queryToUse || query).trim();
     if (!currentQueryText) return;
 
@@ -465,44 +464,43 @@ export default function App() {
     }
     
     // 2. Perform database write silently in the background
-    try {
-      const processSearch = async () => {
-        const newRedirectId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
-        let savedDeletedWords: string[] = [];
-        try {
-          const raw = localStorage.getItem('localDeletedWords');
-          savedDeletedWords = raw ? JSON.parse(raw) : [];
-          if (!Array.isArray(savedDeletedWords)) savedDeletedWords = [];
-          savedDeletedWords = savedDeletedWords.filter(w => typeof w === 'string' && w.trim() !== '');
-        } catch (e) {}
-        
-        const data = {
-          query: currentQueryText,
-          timestamp: Date.now(),
-          userId: user.uid,
-          uniqueId: newRedirectId,
-          searchType: searchType,
-          site: siteMode,
-          deletedWords: savedDeletedWords
+    if (isAuthReady && user) {
+      try {
+        const processSearch = async () => {
+          const newRedirectId = Date.now().toString() + Math.random().toString(36).substring(2, 9);
+          let savedDeletedWords: string[] = [];
+          try {
+            const raw = localStorage.getItem('localDeletedWords');
+            savedDeletedWords = raw ? JSON.parse(raw) : [];
+            if (!Array.isArray(savedDeletedWords)) savedDeletedWords = [];
+            savedDeletedWords = savedDeletedWords.filter(w => typeof w === 'string' && w.trim() !== '');
+          } catch (e) {}
+          
+          const data = {
+            query: currentQueryText,
+            timestamp: Date.now(),
+            userId: user.uid,
+            uniqueId: newRedirectId,
+            searchType: searchType,
+            site: siteMode,
+            deletedWords: savedDeletedWords
+          };
+
+          await setDoc(doc(db, SHARED_DOC_PATH), data);
+          setLocalDeletedWords([]); // Clear state
+          localStorage.removeItem('localDeletedWords'); // Clear storage
+          candidateRef.current = null; 
         };
 
-        await setDoc(doc(db, SHARED_DOC_PATH), data);
-        setLocalDeletedWords([]); // Clear state
-        localStorage.removeItem('localDeletedWords'); // Clear storage
-        candidateRef.current = null; 
-      };
-
-      await processSearch();
-      
-      // Shortest possible delay to ensure the firestore call is dispatched
-      setTimeout(() => {
-        window.location.replace(localUrl);
-      }, 100);
-
-    } catch (e) {
-      handleFirestoreError(e, OperationType.WRITE, SHARED_DOC_PATH);
-      window.location.replace(localUrl);
+        await processSearch();
+      } catch (e) {
+        // Just log, don't block redirect
+        console.error("Firestore sync failed", e);
+      }
     }
+    
+    // Always navigate
+    window.location.replace(localUrl);
   };
 
   // Auto execution logic via Direct Double-Device Redirect
@@ -835,9 +833,7 @@ export default function App() {
                   onMouseDown={(e) => {
                     e.preventDefault(); // Prevent input onBlur from closing search before we can handle the search
                     if (query.trim() !== "") {
-                      handleSearch();
-                      setShowSuggestions(false);
-                      setIsSearchActive(false);
+                      handleSearch(query);
                     }
                   }}
                 />
