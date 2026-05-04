@@ -817,7 +817,7 @@ export default function App() {
                         {suggestions.map((suggestion, index) => (
                           <div
                             key={`sugg-${index}`}
-                            className={`px-4 py-2.5 cursor-pointer flex items-center space-x-3 text-sm transition-colors ${
+                            className={`px-4 py-2.5 cursor-pointer flex items-center space-x-3 text-base font-semibold transition-colors ${
                               isDarkMode ? 'text-[#e8eaed] hover:bg-[#303134]' : 'text-gray-800 hover:bg-gray-100'
                             }`}
                             onClick={() => {
@@ -842,7 +842,7 @@ export default function App() {
                     {trendingSearches.map((term, index) => (
                       <div
                         key={`trend-${index}`}
-                        className={`px-4 py-2.5 cursor-pointer flex items-center space-x-3 text-sm transition-colors ${
+                        className={`px-4 py-2.5 cursor-pointer flex items-center space-x-3 text-base font-semibold transition-colors ${
                           isDarkMode ? 'text-[#e8eaed] hover:bg-[#303134]' : 'text-gray-800 hover:bg-gray-100'
                         }`}
                         onClick={() => {
