@@ -16,7 +16,7 @@ import {
   onAuthStateChanged, 
   User 
 } from 'firebase/auth';
-import { Search, Mic, Menu, Grid, Info, Sparkles, CircleUser } from 'lucide-react';
+import { Search, Mic, Menu, Grid, Info, Sparkles, CircleUser, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, auth } from './firebase';
 import { getMostImportantWork, getSearchSuggestions } from './services/aiService';
@@ -93,6 +93,51 @@ export default function App() {
   const [siteMode, setSiteMode] = useState<'google' | 'wikipedia'>(() => {
     return (localStorage.getItem('siteMode') as 'google' | 'wikipedia') || 'google';
   });
+  
+  const [trendingSearches, setTrendingSearches] = useState<string[]>([]);
+
+  // Helper for Italian date-based terms
+  const getDynamicTerms = () => {
+    const now = new Date();
+    const months = [
+      "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+      "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
+    ];
+    const yearsInLetters: Record<number, string> = {
+      2024: "duemilaventiquattro",
+      2025: "duemilaventicinque",
+      2026: "duemilaventisei",
+      2027: "duemilaventisette",
+      2028: "duemilaventotto",
+      2029: "duemilaventinove",
+      2030: "duemilatrenta"
+    };
+
+    const month = months[now.getMonth()];
+    const year = now.getFullYear();
+    const yearLetters = yearsInLetters[year] || year.toString();
+
+    const baseTerms = [
+      `previsioni meteo ${month} ${year}`,
+      "carta d'identità elettronica",
+      "classifica serie A",
+      "estrazione superenalotto oggi",
+      "voli economici",
+      "finale champions league",
+      "offerta iphone",
+      "ricetta tiramisù veloce",
+      "ristoranti vicino a me",
+      `pun luce e psv gas ${year}`
+    ];
+
+    // Shuffle
+    return baseTerms.sort(() => Math.random() - 0.5);
+  };
+
+  useEffect(() => {
+    setTrendingSearches(getDynamicTerms());
+  }, []);
+
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('isDarkMode') === 'true';
   });
@@ -550,6 +595,18 @@ export default function App() {
               <span className="text-blue-700 font-medium hover:underline cursor-pointer">Español</span>
               <span className="text-xs text-gray-500">1.800.000+ artículos</span>
             </div>
+            <div className="flex flex-col">
+              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Русский</span>
+              <span className="text-xs text-gray-500">2.000.000+ статей</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Slovenščina</span>
+              <span className="text-xs text-gray-500">180.000+ člankov</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Nederlands</span>
+              <span className="text-xs text-gray-500">2.100.000+ artikelen</span>
+            </div>
           </div>
 
           <div className="mt-10 w-full max-w-xl border border-gray-300 p-2 text-center text-blue-700 font-medium hover:bg-gray-50 cursor-pointer rounded">
@@ -719,6 +776,8 @@ export default function App() {
                 onFocus={() => {
                   setIsSearchActive(true);
                   if (suggestions.length > 0) setShowSuggestions(true);
+                  // Refresh trending searches on focus if empty
+                  if (query.trim() === "") setTrendingSearches(getDynamicTerms());
                 }}
                 onBlur={() => {
                   // Delay closing suggestions to allow clicking one
@@ -733,15 +792,14 @@ export default function App() {
                     setShowSuggestions(false);
                   }
                 }}
-                placeholder="Cerca su Google"
                 className={`flex-grow text-lg outline-none bg-transparent h-full ${isDarkMode ? 'text-[#e8eaed] placeholder-[#9aa0a6]' : 'text-gray-900'}`}
               />
               <Mic className={`w-5 h-5 ml-3 cursor-pointer flex-shrink-0 ${isDarkMode ? 'text-[#8ab4f8]' : 'text-gray-500'}`} />
             </div>
 
-            {/* SUGGESTIONS DROPDOWN */}
+            {/* SUGGESTIONS / TRENDING DROPDOWN */}
             <AnimatePresence>
-              {showSuggestions && suggestions.length > 0 && (
+              {isSearchActive && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -753,23 +811,49 @@ export default function App() {
                   }`}
                 >
                   <div className="py-2">
-                    {suggestions.map((suggestion, index) => (
+                    {/* Standard Suggestions (from AI) */}
+                    {query.trim() !== "" && suggestions.length > 0 && (
+                      <>
+                        {suggestions.map((suggestion, index) => (
+                          <div
+                            key={`sugg-${index}`}
+                            className={`px-4 py-2.5 cursor-pointer flex items-center space-x-3 text-sm transition-colors ${
+                              isDarkMode ? 'text-[#e8eaed] hover:bg-[#303134]' : 'text-gray-800 hover:bg-gray-100'
+                            }`}
+                            onClick={() => {
+                              setQuery(suggestion);
+                              emitTyping(suggestion);
+                              setShowSuggestions(false);
+                              setTimeout(() => handleSearch(suggestion), 100);
+                            }}
+                          >
+                            <Search className={`w-4 h-4 ${isDarkMode ? 'text-[#9aa0a6]' : 'text-gray-400'}`} />
+                            <span>{suggestion}</span>
+                          </div>
+                        ))}
+                        <div className={`my-1 border-t ${isDarkMode ? 'border-[#3c4043]' : 'border-gray-100'}`} />
+                      </>
+                    )}
+
+                    {/* Trending Searches - Always visible when active */}
+                    <div className={`px-4 py-1.5 text-[11px] font-medium uppercase tracking-wider ${isDarkMode ? 'text-[#9aa0a6]' : 'text-gray-500'}`}>
+                      Ricerche di tendenza
+                    </div>
+                    {trendingSearches.map((term, index) => (
                       <div
-                        key={index}
-                        className={`px-4 py-2 cursor-pointer flex items-center space-x-3 text-sm transition-colors ${
+                        key={`trend-${index}`}
+                        className={`px-4 py-2.5 cursor-pointer flex items-center space-x-3 text-sm transition-colors ${
                           isDarkMode ? 'text-[#e8eaed] hover:bg-[#303134]' : 'text-gray-800 hover:bg-gray-100'
                         }`}
                         onClick={() => {
-                          setQuery(suggestion);
-                          emitTyping(suggestion);
+                          setQuery(term);
+                          emitTyping(term);
                           setShowSuggestions(false);
-                          setTimeout(() => {
-                            handleSearch(suggestion);
-                          }, 100);
+                          setTimeout(() => handleSearch(term), 100);
                         }}
                       >
-                        <Search className={`w-4 h-4 ${isDarkMode ? 'text-[#9aa0a6]' : 'text-gray-400'}`} />
-                        <span>{suggestion}</span>
+                        <TrendingUp className={`w-4 h-4 ${isDarkMode ? 'text-[#9aa0a6]' : 'text-gray-400'}`} />
+                        <span>{term}</span>
                       </div>
                     ))}
                   </div>
