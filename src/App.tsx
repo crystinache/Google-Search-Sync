@@ -790,7 +790,7 @@ export default function App() {
             >
               {isSearchActive ? (
                 <span 
-                  className="w-5 h-5 mr-3 flex-shrink-0 flex items-center justify-center font-bold text-xl leading-none select-none bg-clip-text text-transparent"
+                  className="w-5 h-5 mr-3 flex-shrink-0 flex items-center justify-center font-black text-2xl leading-none select-none bg-clip-text text-transparent"
                   style={{ 
                     background: 'conic-gradient(#ea4335 0%, #4285f4 25%, #34a853 50%, #fbbc05 75%, #ea4335 100%)',
                     WebkitBackgroundClip: 'text'
