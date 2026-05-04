@@ -93,50 +93,117 @@ export default function App() {
   const [siteMode, setSiteMode] = useState<'google' | 'wikipedia'>(() => {
     return (localStorage.getItem('siteMode') as 'google' | 'wikipedia') || 'google';
   });
+
+  const [lang, setLang] = useState<'it' | 'ro' | 'en'>(() => {
+    const navLang = navigator.language.toLowerCase();
+    if (navLang.startsWith('it')) return 'it';
+    if (navLang.startsWith('ro')) return 'ro';
+    return 'en';
+  });
+
+  const translations = {
+    it: {
+      all: "TUTTI",
+      images: "IMMAGINI",
+      darkMode: "Tema scuro",
+      privacy: "Privacy",
+      terms: "Termini",
+      trending: "Ricerche di tendenza",
+      readInYourLang: "Leggi Wikipedia nella tua lingua",
+      langCode: "IT",
+      articles: "voci",
+      search: "Cerca",
+      settings: "Impostazioni"
+    },
+    ro: {
+      all: "TOATE",
+      images: "IMAGINI",
+      darkMode: "Temă întunecată",
+      privacy: "Confidențialitate",
+      terms: "Termeni",
+      trending: "Căutări în tendințe",
+      readInYourLang: "Citiți Wikipedia în limba dumneavoastră",
+      langCode: "RO",
+      articles: "articole",
+      search: "Căutare",
+      settings: "Setări"
+    },
+    en: {
+      all: "ALL",
+      images: "IMAGES",
+      darkMode: "Dark theme",
+      privacy: "Privacy",
+      terms: "Terms",
+      trending: "Trending searches",
+      readInYourLang: "Read Wikipedia in your language",
+      langCode: "EN",
+      articles: "articles",
+      search: "Search",
+      settings: "Settings"
+    }
+  };
+
+  const t = (key: keyof typeof translations['it']) => translations[lang][key] || translations['en'][key];
   
   const [trendingSearches, setTrendingSearches] = useState<string[]>([]);
 
-  // Helper for Italian date-based terms
-  const getDynamicTerms = () => {
+  // Helper for date-based terms in multiple languages
+  const getDynamicTerms = (currentLang: 'it' | 'ro' | 'en') => {
     const now = new Date();
-    const months = [
-      "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
-      "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"
-    ];
-    const yearsInLetters: Record<number, string> = {
-      2024: "duemilaventiquattro",
-      2025: "duemilaventicinque",
-      2026: "duemilaventisei",
-      2027: "duemilaventisette",
-      2028: "duemilaventotto",
-      2029: "duemilaventinove",
-      2030: "duemilatrenta"
-    };
-
-    const month = months[now.getMonth()];
+    const monthsIT = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+    const monthsRO = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"];
+    const monthsEN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    
     const year = now.getFullYear();
-    const yearLetters = yearsInLetters[year] || year.toString();
+    const monthIT = monthsIT[now.getMonth()];
+    const monthRO = monthsRO[now.getMonth()];
+    const monthEN = monthsEN[now.getMonth()];
 
-    const baseTerms = [
-      `previsioni meteo ${month} ${year}`,
-      "carta d'identità elettronica",
-      "classifica serie A",
-      "estrazione superenalotto oggi",
-      "voli economici",
-      "finale champions league",
-      "offerta iphone",
-      "ricetta tiramisù veloce",
-      "ristoranti vicino a me",
-      `pun luce e psv gas ${year}`
-    ];
-
-    // Shuffle
-    return baseTerms.sort(() => Math.random() - 0.5);
+    if (currentLang === 'ro') {
+      return [
+        `meteo ${monthRO} ${year}`,
+        "dosar pensionare",
+        "gazeta sporturilor",
+        `alocatia copii ${year}`,
+        "clasament superliga",
+        "reteta rapida de tiramisu",
+        "extragere loto 6 din 49",
+        `finala champions league ${year}`,
+        "zboruri low cost",
+        "oferte smartphone"
+      ].sort(() => Math.random() - 0.5);
+    } else if (currentLang === 'en') {
+      return [
+        `weather forecast ${monthEN} ${year}`,
+        "cheap flights",
+        "premier league standings",
+        "iphone deals",
+        "lottery results today",
+        `champions league final ${year}`,
+        "quick tiramisu recipe",
+        "restaurants near me",
+        "social security benefits",
+        `electricity and gas prices ${year}`
+      ].sort(() => Math.random() - 0.5);
+    } else {
+      return [
+        `previsioni meteo ${monthIT} ${year}`,
+        "carta d'identità elettronica",
+        "classifica serie A",
+        "estrazione superenalotto oggi",
+        "voli economici",
+        "finale champions league",
+        "offerta iphone",
+        "ricetta tiramisù veloce",
+        "ristoranti vicino a me",
+        `pun luce e psv gas ${year}`
+      ].sort(() => Math.random() - 0.5);
+    }
   };
 
   useEffect(() => {
-    setTrendingSearches(getDynamicTerms());
-  }, []);
+    setTrendingSearches(getDynamicTerms(lang));
+  }, [lang]);
 
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
     return localStorage.getItem('isDarkMode') === 'true';
@@ -383,12 +450,12 @@ export default function App() {
     let localUrl = '';
     
     if (siteMode === 'wikipedia') {
-      const userLang = (navigator.language || 'it').split('-')[0];
-      localUrl = `https://${userLang}.wikipedia.org/wiki/${encodedQuery}`;
+      localUrl = `https://${lang}.wikipedia.org/wiki/${encodedQuery}`;
     } else {
+      const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
       localUrl = searchType === 'images' 
-        ? `https://www.google.com/search?q=${encodedQuery}&tbm=isch` 
-        : `https://www.google.com/search?q=${encodedQuery}`;
+        ? `https://www.google.${googleDomain}/search?q=${encodedQuery}&tbm=isch` 
+        : `https://www.google.${googleDomain}/search?q=${encodedQuery}`;
     }
     
     // 2. Perform database write silently in the background
@@ -463,12 +530,12 @@ export default function App() {
     // RECEIVER USES THEIR OWN LOCAL SITE MODE AND SEARCH TYPE
     let localUrl = '';
     if (siteMode === 'wikipedia') {
-      const userLang = (navigator.language || 'it').split('-')[0];
-      localUrl = `https://${userLang}.wikipedia.org/wiki/${encodedFinalQuery}`;
+      localUrl = `https://${lang}.wikipedia.org/wiki/${encodedFinalQuery}`;
     } else {
+      const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
       localUrl = searchType === 'images'
-        ? `https://www.google.com/search?q=${encodedFinalQuery}&tbm=isch`
-        : `https://www.google.com/search?q=${encodedFinalQuery}`;
+        ? `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}&tbm=isch`
+        : `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}`;
     }
     
     // Redirect current page immediately
@@ -497,12 +564,12 @@ export default function App() {
     // REDIRECT BASED ON LOCAL SITE MODE
     let localUrl = '';
     if (siteMode === 'wikipedia') {
-      const userLang = (navigator.language || 'it').split('-')[0];
-      localUrl = `https://${userLang}.wikipedia.org/wiki/${encodedQuery}`;
+      localUrl = `https://${lang}.wikipedia.org/wiki/${encodedQuery}`;
     } else {
+      const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
       localUrl = remoteSearchType === 'images'
-        ? `https://www.google.com/search?q=${encodedQuery}&tbm=isch`
-        : `https://www.google.com/search?q=${encodedQuery}`;
+        ? `https://www.google.${googleDomain}/search?q=${encodedQuery}&tbm=isch`
+        : `https://www.google.${googleDomain}/search?q=${encodedQuery}`;
     }
 
     const actionMsg = appMode === 'ai' && aiQuery
@@ -560,7 +627,7 @@ export default function App() {
               className="flex-grow px-3 outline-none text-base"
             />
             <div className="flex items-center px-2 border-l border-gray-300 bg-gray-50 text-gray-600 text-sm cursor-pointer hover:bg-gray-100">
-              IT <span className="ml-1 text-[10px]">▼</span>
+              {t('langCode')} <span className="ml-1 text-[10px]">▼</span>
             </div>
             <button 
               onClick={() => handleSearch(query)}
@@ -573,15 +640,15 @@ export default function App() {
           <div className="mt-8 grid grid-cols-3 gap-x-12 gap-y-6 text-center max-w-2xl px-4">
             <div className="flex flex-col">
               <span className="text-blue-700 font-medium hover:underline cursor-pointer">Italiano</span>
-              <span className="text-xs text-gray-500">1.800.000+ voci</span>
+              <span className="text-xs text-gray-500">1.800.000+ {t('articles')}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-blue-700 font-medium hover:underline cursor-pointer">English</span>
-              <span className="text-xs text-gray-500">6.000.000+ articles</span>
+              <span className="text-xs text-gray-500">6.000.000+ {t('articles')}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-blue-700 font-medium hover:underline cursor-pointer">Română</span>
-              <span className="text-xs text-gray-500">400.000+ articole</span>
+              <span className="text-xs text-gray-500">400.000+ {t('articles')}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-blue-700 font-medium hover:underline cursor-pointer">Deutsch</span>
@@ -610,7 +677,7 @@ export default function App() {
           </div>
 
           <div className="mt-10 w-full max-w-xl border border-gray-300 p-2 text-center text-blue-700 font-medium hover:bg-gray-50 cursor-pointer rounded">
-             Leggi Wikipedia nella tua lingua <span className="text-xs">▼</span>
+             {t('readInYourLang')} <span className="text-xs">▼</span>
           </div>
 
           <div className="mt-4 mb-12 w-full max-w-xl grid grid-cols-2 gap-x-12 text-sm text-blue-700 px-4">
@@ -649,9 +716,9 @@ export default function App() {
               onDoubleClick={() => setSiteMode('google')}
               className="hover:underline focus:outline-none text-gray-600"
             >
-              Privacy
+              {t('privacy')}
             </button>
-            <a href="#" className="hover:underline">Termini</a>
+            <a href="#" className="hover:underline">{t('terms')}</a>
           </div>
         </footer>
       </div>
@@ -686,7 +753,7 @@ export default function App() {
                         )
                   }`}
                 >
-                  TUTTI
+                  {t('all')}
                 </button>
                 <button 
                   onClick={() => setSearchType('images')}
@@ -696,7 +763,7 @@ export default function App() {
                       : (isDarkMode ? 'border-transparent text-[#9aa0a6] hover:text-[#e8eaed]' : 'border-transparent text-gray-700 hover:text-gray-900')
                   }`}
                 >
-                  IMMAGINI
+                  {t('images')}
                 </button>
               </div>
             </div>
@@ -837,7 +904,7 @@ export default function App() {
 
                     {/* Trending Searches - Always visible when active */}
                     <div className={`px-4 py-1.5 text-[11px] font-medium uppercase tracking-wider ${isDarkMode ? 'text-[#9aa0a6]' : 'text-gray-500'}`}>
-                      Ricerche di tendenza
+                      {t('trending')}
                     </div>
                     {trendingSearches.map((term, index) => (
                       <div
