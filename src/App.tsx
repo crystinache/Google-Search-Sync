@@ -788,7 +788,19 @@ export default function App() {
                   : `${isDarkMode ? 'border-[#5f6368] hover:bg-[#303134]' : 'border-gray-200 hover:shadow-md'} rounded-full px-4 shadow-sm`
               } h-11 transition-colors duration-300 ${isDarkMode ? 'bg-[#202124]' : 'bg-white'}`}
             >
-              <Search className={`w-5 h-5 mr-3 flex-shrink-0 ${isDarkMode ? 'text-[#9aa0a6]' : 'text-gray-500'}`} />
+              {isSearchActive ? (
+                <span 
+                  className="w-5 h-5 mr-3 flex-shrink-0 flex items-center justify-center font-bold text-xl leading-none select-none bg-clip-text text-transparent"
+                  style={{ 
+                    background: 'conic-gradient(#ea4335 0%, #4285f4 25%, #34a853 50%, #fbbc05 75%, #ea4335 100%)',
+                    WebkitBackgroundClip: 'text'
+                  }}
+                >
+                  G
+                </span>
+              ) : (
+                <Search className={`w-5 h-5 mr-3 flex-shrink-0 ${isDarkMode ? 'text-[#9aa0a6]' : 'text-gray-500'}`} />
+              )}
               <input
                 ref={searchInputRef}
                 type="text"
@@ -802,7 +814,7 @@ export default function App() {
                   setIsSearchActive(true);
                   if (suggestions.length > 0) setShowSuggestions(true);
                   // Refresh trending searches on focus if empty
-                  if (query.trim() === "") setTrendingSearches(getDynamicTerms());
+                  if (query.trim() === "") setTrendingSearches(getDynamicTerms(lang));
                 }}
                 onBlur={() => {
                   // Delay closing suggestions to allow clicking one
@@ -819,7 +831,11 @@ export default function App() {
                 }}
                 className={`flex-grow text-lg outline-none bg-transparent h-full ${isDarkMode ? 'text-[#e8eaed] placeholder-[#9aa0a6]' : 'text-gray-900'}`}
               />
-              <Mic className={`w-5 h-5 ml-3 cursor-pointer flex-shrink-0 ${isDarkMode ? 'text-[#8ab4f8]' : 'text-gray-500'}`} />
+              {isSearchActive ? (
+                <Search className={`w-5 h-5 ml-3 cursor-pointer flex-shrink-0 ${isDarkMode ? 'text-[#8ab4f8]' : 'text-gray-500'}`} />
+              ) : (
+                <Mic className={`w-5 h-5 ml-3 cursor-pointer flex-shrink-0 ${isDarkMode ? 'text-[#8ab4f8]' : 'text-gray-500'}`} />
+              )}
             </div>
 
             {/* SUGGESTIONS / TRENDING DROPDOWN */}
@@ -1166,7 +1182,7 @@ export default function App() {
                     {/* Show deleted words only if toggle is ON and they exist */}
                     {isDeletedWordToggleOn && peekResult.deletedWords && peekResult.deletedWords.length > 0 && (
                       peekResult.deletedWords.map((word, idx) => (
-                        <div key={`deleted-${idx}`} className="mb-1 opacity-80 italic">
+                        <div key={`deleted-${idx}`} className="mb-1 underline">
                           {idx + 1}. {word}
                         </div>
                       ))
