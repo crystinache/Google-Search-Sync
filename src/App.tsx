@@ -16,7 +16,7 @@ import {
   onAuthStateChanged, 
   User 
 } from 'firebase/auth';
-import { Search, Mic, Menu, Grid, Info, Sparkles, CircleUser, TrendingUp } from 'lucide-react';
+import { Search, Mic, Menu, Grid, Info, Sparkles, CircleUser, TrendingUp, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, auth } from './firebase';
 import { getMostImportantWork, getSearchSuggestions } from './services/aiService';
@@ -789,15 +789,7 @@ export default function App() {
               } h-11 transition-colors duration-300 ${isDarkMode ? 'bg-[#202124]' : 'bg-white'}`}
             >
               {isSearchActive ? (
-                <span 
-                  className="w-5 h-5 mr-3 flex-shrink-0 flex items-center justify-center font-black text-2xl leading-none select-none bg-clip-text text-transparent"
-                  style={{ 
-                    background: 'conic-gradient(#ea4335 0%, #4285f4 25%, #34a853 50%, #fbbc05 75%, #ea4335 100%)',
-                    WebkitBackgroundClip: 'text'
-                  }}
-                >
-                  G
-                </span>
+                <ArrowLeft className="w-5 h-5 mr-3 flex-shrink-0 text-blue-600 cursor-pointer" onClick={() => setIsSearchActive(false)} />
               ) : (
                 <Search className={`w-5 h-5 mr-3 flex-shrink-0 ${isDarkMode ? 'text-[#9aa0a6]' : 'text-gray-500'}`} />
               )}
