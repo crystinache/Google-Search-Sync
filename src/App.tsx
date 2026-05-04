@@ -105,6 +105,7 @@ export default function App() {
     it: {
       all: "TUTTI",
       images: "IMMAGINI",
+      footerImages: "Immagini",
       darkMode: "Tema scuro",
       privacy: "Privacy",
       terms: "Termini",
@@ -118,6 +119,7 @@ export default function App() {
     ro: {
       all: "TOATE",
       images: "IMAGINI",
+      footerImages: "Imagini",
       darkMode: "Temă întunecată",
       privacy: "Confidențialitate",
       terms: "Termeni",
@@ -131,6 +133,7 @@ export default function App() {
     en: {
       all: "ALL",
       images: "IMAGES",
+      footerImages: "Images",
       darkMode: "Dark theme",
       privacy: "Privacy",
       terms: "Terms",
@@ -824,7 +827,10 @@ export default function App() {
                 className={`flex-grow text-lg outline-none bg-transparent h-full ${isDarkMode ? 'text-[#e8eaed] placeholder-[#9aa0a6]' : 'text-gray-900'}`}
               />
               {isSearchActive ? (
-                <Search className={`w-5 h-5 ml-3 cursor-pointer flex-shrink-0 ${isDarkMode ? 'text-[#8ab4f8]' : 'text-gray-500'}`} />
+                <Search 
+                  className={`w-5 h-5 ml-3 cursor-pointer flex-shrink-0 ${isDarkMode ? 'text-[#8ab4f8]' : 'text-gray-500'}`} 
+                  onClick={() => query.trim() !== "" && handleSearchSubmit(new Event('submit') as any)}
+                />
               ) : (
                 <Mic className={`w-5 h-5 ml-3 cursor-pointer flex-shrink-0 ${isDarkMode ? 'text-[#8ab4f8]' : 'text-gray-500'}`} />
               )}
@@ -913,16 +919,16 @@ export default function App() {
                 onClick={() => setIsDarkMode(!isDarkMode)}
                 className="hover:underline focus:outline-none"
               >
-                Tema scuro
+                {t('darkMode')}
               </button>
-              <a href="#" className="hover:underline">Immagini</a>
+              <a href="#" className="hover:underline">{t('footerImages')}</a>
               <button 
                 onDoubleClick={() => setSiteMode(siteMode === 'wikipedia' ? 'google' : 'wikipedia')}
                 className="hover:underline focus:outline-none"
               >
-                Privacy
+                {t('privacy')}
               </button>
-              <a href="#" className="hover:underline">Termini</a>
+              <a href="#" className="hover:underline">{t('terms')}</a>
             </div>
           </motion.footer>
         )}
