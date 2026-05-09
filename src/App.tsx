@@ -83,37 +83,10 @@ export default function App() {
   const [pendingData, setPendingData] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [appMode, setAppMode] = useState<'mirror' | 'ai' | 'typing' | 'blackScreenPeek'>(() => {
-    return (localStorage.getItem('appMode') as 'mirror' | 'ai' | 'typing' | 'blackScreenPeek') || 'mirror';
-  });
-
-  // Keep appModeRef in sync for safe use in async/closure callbacks
-  const appModeRef = useRef(appMode);
-  useEffect(() => {
-    appModeRef.current = appMode;
-    localStorage.setItem('appMode', appMode);
-  }, [appMode]);
-
+  const [appMode, setAppMode] = useState<'mirror' | 'ai' | 'typing' | 'blackScreenPeek'>('mirror');
   const [showSecretMenu, setShowSecretMenu] = useState(false);
-  const [searchType, setSearchType] = useState<'web' | 'images'>(() => {
-    return (localStorage.getItem('searchType') as 'web' | 'images') || 'web';
-  });
-
-  const searchTypeRef = useRef(searchType);
-  useEffect(() => {
-    searchTypeRef.current = searchType;
-    localStorage.setItem('searchType', searchType);
-  }, [searchType]);
-
-  const [siteMode, setSiteMode] = useState<'google' | 'wikipedia'>(() => {
-    return (localStorage.getItem('siteMode') as 'google' | 'wikipedia') || 'google';
-  });
-
-  const siteModeRef = useRef(siteMode);
-  useEffect(() => {
-    siteModeRef.current = siteMode;
-    localStorage.setItem('siteMode', siteMode);
-  }, [siteMode]);
+  const [searchType, setSearchType] = useState<'web' | 'images'>('web');
+  const [siteMode, setSiteMode] = useState<'google' | 'wikipedia'>('google');
 
   const [magnumOpusInput, setMagnumOpusInput] = useState('');
   const [magnumOpusOutput, setMagnumOpusOutput] = useState('');
@@ -138,11 +111,6 @@ export default function App() {
     if (navLang.startsWith('ro')) return 'ro';
     return 'en';
   });
-
-  const langRef = useRef(lang);
-  useEffect(() => {
-    langRef.current = lang;
-  }, [lang]);
 
   const translations = {
     it: {
@@ -282,7 +250,6 @@ export default function App() {
   const [isDeletedWordToggleOn, setIsDeletedWordToggleOn] = useState(false);
   
   useEffect(() => {
-    localStorage.setItem('appMode', appMode);
     // Reset peek states when changing mode
     if (appMode !== 'blackScreenPeek') {
       setIsPeekStarted(false);
@@ -293,11 +260,11 @@ export default function App() {
   }, [appMode]);
 
   useEffect(() => {
-    localStorage.setItem('searchType', searchType);
+    // No longer persisting searchType
   }, [searchType]);
 
   useEffect(() => {
-    localStorage.setItem('siteMode', siteMode);
+    // No longer persisting siteMode
   }, [siteMode]);
 
   useEffect(() => {
@@ -481,7 +448,7 @@ export default function App() {
       unsubscribe();
       unsubscribeTyping();
     };
-  }, [isAuthReady, user, appMode, searchType]);
+  }, [isAuthReady, user, appMode, searchType, siteMode, lang]);
 
   const emitTyping = async (text: string) => {
     if (!isAuthReady || !user) return;
@@ -556,24 +523,20 @@ export default function App() {
   // Auto execution logic via Direct Double-Device Redirect
   const autoExecuteRemoteQuery = async (data: any) => {
     const { query: rawQuery } = data;
-    const currentMode = appModeRef.current;
-    const currentLang = langRef.current;
-    const currentSiteMode = siteModeRef.current;
-    const currentSearchType = searchTypeRef.current;
     
     // RECEIVER APPLIES THEIR OWN LOCAL MODES
     let finalQuery = rawQuery;
     
-    if (currentMode === 'ai') {
+    if (appMode === 'ai') {
       try {
-        finalQuery = await getMostImportantWork(rawQuery, currentLang);
+        finalQuery = await getMostImportantWork(rawQuery, lang);
       } catch (e) {
         console.error("AI Transformation failed:", e);
         finalQuery = rawQuery;
       }
     }
 
-    if (currentMode === 'blackScreenPeek') {
+    if (appMode === 'blackScreenPeek') {
       setPeekResult({
         query: finalQuery,
         deletedWords: data.deletedWords
@@ -591,11 +554,11 @@ export default function App() {
     
     // RECEIVER USES THEIR OWN LOCAL SITE MODE AND SEARCH TYPE
     let localUrl = '';
-    if (currentSiteMode === 'wikipedia') {
-      localUrl = `https://${currentLang}.wikipedia.org/wiki/${encodedFinalQuery}`;
+    if (siteMode === 'wikipedia') {
+      localUrl = `https://${lang}.wikipedia.org/wiki/${encodedFinalQuery}`;
     } else {
-      const googleDomain = currentLang === 'it' ? 'it' : (currentLang === 'ro' ? 'ro' : 'com');
-      localUrl = currentSearchType === 'images'
+      const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
+      localUrl = searchType === 'images'
         ? `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}&tbm=isch`
         : `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}`;
     }
