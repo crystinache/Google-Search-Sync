@@ -355,6 +355,13 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [wakeLock]);
 
+  useEffect(() => {
+    if (syncMessage && !syncMessage.isError) {
+      const timer = setTimeout(() => setSyncMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [syncMessage]);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
   const lastRedirectId = useRef<string | null>(null);
   const lastHandledSyncId = useRef<string | null>(null);
@@ -528,8 +535,12 @@ export default function App() {
     let finalQuery = rawQuery;
     
     if (appMode === 'ai') {
-      const userLang = navigator.language || 'it';
-      finalQuery = await getMostImportantWork(rawQuery, userLang);
+      try {
+        finalQuery = await getMostImportantWork(rawQuery, lang);
+      } catch (e) {
+        console.error("AI Transformation failed:", e);
+        finalQuery = rawQuery;
+      }
     }
 
     if (appMode === 'blackScreenPeek') {
@@ -925,6 +936,25 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      {/* SYNC MESSAGE / TOAST */}
+      <AnimatePresence>
+        {syncMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: -20, x: '-50%' }}
+            className={`fixed top-4 left-1/2 z-[150] px-6 py-2.5 rounded-full text-xs font-bold shadow-xl flex items-center gap-2 border ${
+              syncMessage.isError 
+                ? 'bg-red-500 border-red-400 text-white' 
+                : 'bg-[#1a73e8] border-blue-400 text-white'
+            }`}
+          >
+            {!syncMessage.isError && <Sparkles className="w-3 h-3" />}
+            {syncMessage.text}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* FOOTER */}
       <AnimatePresence>
