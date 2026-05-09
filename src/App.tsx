@@ -94,6 +94,23 @@ export default function App() {
     return (localStorage.getItem('siteMode') as 'google' | 'wikipedia') || 'google';
   });
 
+  const [magnumOpusInput, setMagnumOpusInput] = useState('');
+  const [magnumOpusOutput, setMagnumOpusOutput] = useState('');
+  const [isTestLoading, setIsTestLoading] = useState(false);
+
+  const handleTestMagnumOpus = async () => {
+    if (!magnumOpusInput.trim()) return;
+    setIsTestLoading(true);
+    try {
+      const result = await getMostImportantWork(magnumOpusInput, lang);
+      setMagnumOpusOutput(result);
+    } catch (err) {
+      setMagnumOpusOutput("Errore");
+    } finally {
+      setIsTestLoading(false);
+    }
+  };
+
   const [lang, setLang] = useState<'it' | 'ro' | 'en'>(() => {
     const navLang = navigator.language.toLowerCase();
     if (navLang.startsWith('it')) return 'it';
@@ -994,11 +1011,45 @@ export default function App() {
                   }`}
                 >
                   <div className="text-left">
-                    <p className="font-bold">Prompt AI: Analisi Migliore</p>
+                    <p className="font-bold">Prompt AI: Magnum Opus</p>
                     <p className="text-xs text-gray-500 group-hover:text-gray-400">Riceve un output elaborato dall'AI</p>
                   </div>
                   {appMode === 'ai' && <div className="w-4 h-4 bg-[#1a73e8] rounded-full shadow-[0_0_8px_rgba(26,115,232,0.6)]" />}
                 </button>
+
+                {appMode === 'ai' && (
+                  <div className="p-4 bg-gray-50 rounded-xl space-y-3 border border-gray-200">
+                    <div className="flex flex-col space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Input</label>
+                      <input 
+                        type="text" 
+                        value={magnumOpusInput}
+                        onChange={(e) => setMagnumOpusInput(e.target.value)}
+                        placeholder="Cosa vuoi testare?"
+                        className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      />
+                    </div>
+                    
+                    <button
+                      onClick={handleTestMagnumOpus}
+                      disabled={isTestLoading || !magnumOpusInput.trim()}
+                      className={`w-full py-2 px-4 rounded-lg text-sm font-bold transition-all shadow-sm ${
+                        isTestLoading || !magnumOpusInput.trim()
+                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          : 'bg-amber-500 text-white hover:bg-amber-600 active:scale-95'
+                      }`}
+                    >
+                      {isTestLoading ? 'ELABORAZIONE...' : 'TEST'}
+                    </button>
+
+                    <div className="flex flex-col space-y-1 pt-2 border-t border-gray-100">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Output</label>
+                      <div className="w-full p-2 text-sm bg-white border border-gray-200 rounded-lg min-h-[40px] flex items-center font-mono text-blue-600 font-bold">
+                        {magnumOpusOutput || '---'}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <button
                   onClick={() => {
