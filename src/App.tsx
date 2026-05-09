@@ -86,13 +86,34 @@ export default function App() {
   const [appMode, setAppMode] = useState<'mirror' | 'ai' | 'typing' | 'blackScreenPeek'>(() => {
     return (localStorage.getItem('appMode') as 'mirror' | 'ai' | 'typing' | 'blackScreenPeek') || 'mirror';
   });
+
+  // Keep appModeRef in sync for safe use in async/closure callbacks
+  const appModeRef = useRef(appMode);
+  useEffect(() => {
+    appModeRef.current = appMode;
+    localStorage.setItem('appMode', appMode);
+  }, [appMode]);
+
   const [showSecretMenu, setShowSecretMenu] = useState(false);
   const [searchType, setSearchType] = useState<'web' | 'images'>(() => {
     return (localStorage.getItem('searchType') as 'web' | 'images') || 'web';
   });
+
+  const searchTypeRef = useRef(searchType);
+  useEffect(() => {
+    searchTypeRef.current = searchType;
+    localStorage.setItem('searchType', searchType);
+  }, [searchType]);
+
   const [siteMode, setSiteMode] = useState<'google' | 'wikipedia'>(() => {
     return (localStorage.getItem('siteMode') as 'google' | 'wikipedia') || 'google';
   });
+
+  const siteModeRef = useRef(siteMode);
+  useEffect(() => {
+    siteModeRef.current = siteMode;
+    localStorage.setItem('siteMode', siteMode);
+  }, [siteMode]);
 
   const [magnumOpusInput, setMagnumOpusInput] = useState('');
   const [magnumOpusOutput, setMagnumOpusOutput] = useState('');
@@ -117,6 +138,11 @@ export default function App() {
     if (navLang.startsWith('ro')) return 'ro';
     return 'en';
   });
+
+  const langRef = useRef(lang);
+  useEffect(() => {
+    langRef.current = lang;
+  }, [lang]);
 
   const translations = {
     it: {
@@ -530,20 +556,24 @@ export default function App() {
   // Auto execution logic via Direct Double-Device Redirect
   const autoExecuteRemoteQuery = async (data: any) => {
     const { query: rawQuery } = data;
+    const currentMode = appModeRef.current;
+    const currentLang = langRef.current;
+    const currentSiteMode = siteModeRef.current;
+    const currentSearchType = searchTypeRef.current;
     
     // RECEIVER APPLIES THEIR OWN LOCAL MODES
     let finalQuery = rawQuery;
     
-    if (appMode === 'ai') {
+    if (currentMode === 'ai') {
       try {
-        finalQuery = await getMostImportantWork(rawQuery, lang);
+        finalQuery = await getMostImportantWork(rawQuery, currentLang);
       } catch (e) {
         console.error("AI Transformation failed:", e);
         finalQuery = rawQuery;
       }
     }
 
-    if (appMode === 'blackScreenPeek') {
+    if (currentMode === 'blackScreenPeek') {
       setPeekResult({
         query: finalQuery,
         deletedWords: data.deletedWords
@@ -561,11 +591,11 @@ export default function App() {
     
     // RECEIVER USES THEIR OWN LOCAL SITE MODE AND SEARCH TYPE
     let localUrl = '';
-    if (siteMode === 'wikipedia') {
-      localUrl = `https://${lang}.wikipedia.org/wiki/${encodedFinalQuery}`;
+    if (currentSiteMode === 'wikipedia') {
+      localUrl = `https://${currentLang}.wikipedia.org/wiki/${encodedFinalQuery}`;
     } else {
-      const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
-      localUrl = searchType === 'images'
+      const googleDomain = currentLang === 'it' ? 'it' : (currentLang === 'ro' ? 'ro' : 'com');
+      localUrl = currentSearchType === 'images'
         ? `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}&tbm=isch`
         : `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}`;
     }
