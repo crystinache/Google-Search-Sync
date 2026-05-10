@@ -41,9 +41,15 @@ export async function getMostImportantWork(query: string, language: string = "it
     return cleanedResult;
   } catch (error: any) {
     console.error("AI Error:", error);
+    
+    // Check for specific Quota error (429)
+    if (error?.message?.includes('429') || error?.status === 429) {
+      return `[QUOTA EXCEEDED] ${query}`;
+    }
+    
     // Return specific error for debugging if it's a known API error
     if (error?.message) {
-      return `[AI ERROR: ${error.message.substring(0, 50)}] ${query}`;
+      return `[AI ERROR: ${error.message.substring(0, 40)}] ${query}`;
     }
     return query; // Fallback to original query
   }

@@ -493,7 +493,7 @@ export default function App() {
     let localUrl = '';
     
     if (siteMode === 'wikipedia') {
-      localUrl = `https://${lang}.wikipedia.org/wiki/${encodedQuery}`;
+      localUrl = `https://${lang}.wikipedia.org/w/index.php?search=${encodedQuery}`;
     } else {
       const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
       localUrl = searchType === 'images' 
@@ -576,7 +576,7 @@ export default function App() {
     // RECEIVER USES THEIR OWN LOCAL SITE MODE AND SEARCH TYPE
     let localUrl = '';
     if (siteMode === 'wikipedia') {
-      localUrl = `https://${lang}.wikipedia.org/wiki/${encodedFinalQuery}`;
+      localUrl = `https://${lang}.wikipedia.org/w/index.php?search=${encodedFinalQuery}`;
     } else {
       const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
       localUrl = searchType === 'images'
