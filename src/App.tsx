@@ -88,6 +88,27 @@ export default function App() {
   const [searchType, setSearchType] = useState<'web' | 'images'>('web');
   const [siteMode, setSiteMode] = useState<'google' | 'wikipedia'>('google');
 
+  // Reset state on mount and when returning from bfcache
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      // If the page is persistent (from cache) or it's a fresh load, we force defaults
+      // as requested by the user for every "return" to the app.
+      setAppMode('mirror');
+      setSearchType('web');
+      setSiteMode('google');
+      setQuery('');
+      setIsSearchActive(false);
+      setShowSuggestions(false);
+      setShowSecretMenu(false);
+    };
+
+    window.addEventListener('pageshow', handlePageShow);
+    // Also run once on mount
+    handlePageShow({ persisted: false } as PageTransitionEvent);
+
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, []);
+
   const [magnumOpusInput, setMagnumOpusInput] = useState('');
   const [magnumOpusOutput, setMagnumOpusOutput] = useState('');
   const [isTestLoading, setIsTestLoading] = useState(false);

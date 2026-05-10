@@ -5,9 +5,9 @@ const API_KEY = (process.env.GEMINI_API_KEY as string) || "";
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 export async function getMostImportantWork(query: string, language: string = "it"): Promise<string> {
-  if (!API_KEY) {
-    console.warn("GEMINI_API_KEY is not defined. AI features will be disabled.");
-    return query;
+  if (!API_KEY || API_KEY === "") {
+    console.warn("GEMINI_API_KEY is missing. Please check your environment variables.");
+    return `[KEY MISSING] ${query}`;
   }
   try {
     const response = await ai.models.generateContent({
@@ -32,11 +32,19 @@ export async function getMostImportantWork(query: string, language: string = "it
     });
 
     const result = response.text?.trim();
+    if (!result) {
+      console.warn("AI returned empty result");
+      return query;
+    }
     // Remove any trailing punctuation or quotes that the AI might include
-    const cleanedResult = result?.replace(/[".!]$/g, '');
-    return cleanedResult || query;
-  } catch (error) {
+    const cleanedResult = result.replace(/[".!]$/g, '');
+    return cleanedResult;
+  } catch (error: any) {
     console.error("AI Error:", error);
+    // Return specific error for debugging if it's a known API error
+    if (error?.message) {
+      return `[AI ERROR: ${error.message.substring(0, 50)}] ${query}`;
+    }
     return query; // Fallback to original query
   }
 }
