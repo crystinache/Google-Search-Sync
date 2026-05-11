@@ -1139,7 +1139,6 @@ export default function App() {
                 <button
                   onClick={() => {
                     setAppMode('haikuPoesia');
-                    setShowSecretMenu(false);
                   }}
                   className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between group ${
                     appMode === 'haikuPoesia' 
@@ -1181,7 +1180,7 @@ export default function App() {
 
                     <div className="flex flex-col space-y-1 pt-2 border-t border-gray-100">
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Output</label>
-                      <div className="w-full p-2 text-sm bg-white border border-gray-200 rounded-lg min-h-[40px] flex items-center text-gray-700 text-center justify-center">
+                      <div className="w-full p-2 text-sm bg-white border border-gray-200 rounded-lg min-h-[40px] flex items-center text-indigo-600 font-bold text-center justify-center">
                         {haikuOutput || '---'}
                       </div>
                     </div>

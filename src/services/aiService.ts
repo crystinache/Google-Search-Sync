@@ -65,13 +65,16 @@ export async function getHaikuPoesia(query: string, language: string = "it"): Pr
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-flash-latest",
-      contents: `Crea velocemente una semplice frase in stile poetico di ${cleanWord.length} parole per "${cleanWord}".
+      model: "gemini-3-flash-preview",
+      contents: `Crea un acrostico rapidissimo di ${cleanWord.length} parole per "${cleanWord}".
       
       REGOLE:
-      1. Ogni parola DEVE iniziare con la lettera corrispondente di "${cleanWord}" (acrostico).
-      2. Lingua: ${language}.
-      3. Rispondi SOLO con le parole minuscole, senza punteggiatura.`,
+      1. Parole totali: ESATTAMENTE ${cleanWord.length}.
+      2. Ogni parola deve iniziare con la lettera corrispondente di "${cleanWord}".
+      3. Lingua: "${language}".
+      4. SOLO il testo, minuscolo, niente punteggiatura.
+
+      Esempio "SOLE": splende oro luce eterna`,
     });
 
     const result = response.text?.trim().toLowerCase();
