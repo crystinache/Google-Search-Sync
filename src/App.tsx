@@ -19,7 +19,7 @@ import {
 import { Search, Mic, Menu, Grid, Info, Sparkles, CircleUser, TrendingUp, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, auth } from './firebase';
-import { getMostImportantWork, getSearchSuggestions } from './services/aiService';
+import { getMostImportantWork, getHaikuPoesia, getSearchSuggestions } from './services/aiService';
 
 // --- Error Handling ---
 enum OperationType {
@@ -83,7 +83,7 @@ export default function App() {
   const [pendingData, setPendingData] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [appMode, setAppMode] = useState<'mirror' | 'ai' | 'typing' | 'blackScreenPeek'>('mirror');
+  const [appMode, setAppMode] = useState<'mirror' | 'ai' | 'haikuPoesia' | 'typing' | 'blackScreenPeek'>('mirror');
   const [showSecretMenu, setShowSecretMenu] = useState(false);
   const [searchType, setSearchType] = useState<'web' | 'images'>('web');
   const [siteMode, setSiteMode] = useState<'google' | 'wikipedia'>('google');
@@ -111,6 +111,8 @@ export default function App() {
 
   const [magnumOpusInput, setMagnumOpusInput] = useState('');
   const [magnumOpusOutput, setMagnumOpusOutput] = useState('');
+  const [haikuInput, setHaikuInput] = useState('');
+  const [haikuOutput, setHaikuOutput] = useState('');
   const [isTestLoading, setIsTestLoading] = useState(false);
 
   const handleTestMagnumOpus = async () => {
@@ -121,6 +123,19 @@ export default function App() {
       setMagnumOpusOutput(result);
     } catch (err) {
       setMagnumOpusOutput("Errore");
+    } finally {
+      setIsTestLoading(false);
+    }
+  };
+
+  const handleTestHaiku = async () => {
+    if (!haikuInput.trim()) return;
+    setIsTestLoading(true);
+    try {
+      const result = await getHaikuPoesia(haikuInput, lang);
+      setHaikuOutput(result);
+    } catch (err) {
+      setHaikuOutput("Errore");
     } finally {
       setIsTestLoading(false);
     }
@@ -377,6 +392,7 @@ export default function App() {
   }, [syncMessage]);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const suggestionRequestTimestamps = useRef<number[]>([]);
   const lastRedirectId = useRef<string | null>(null);
   const lastHandledSyncId = useRef<string | null>(null);
   const isInitialSnapshot = useRef(true);
@@ -407,9 +423,25 @@ export default function App() {
 
   useEffect(() => {
     const fetchSuggestions = async () => {
-      if (query.trim().length >= 2) {
+      const trimmedQuery = query.trim();
+      if (trimmedQuery.length >= 3) {
+        // Rate limiting check: max 3 requests per minute
+        const now = Date.now();
+        const oneMinuteAgo = now - 60000;
+        
+        // Clean up old timestamps
+        suggestionRequestTimestamps.current = suggestionRequestTimestamps.current.filter(ts => ts > oneMinuteAgo);
+        
+        if (suggestionRequestTimestamps.current.length >= 3) {
+          console.warn("Suggestion rate limit reached. Max 3 requests per minute.");
+          return;
+        }
+
+        // Record the request timestamp
+        suggestionRequestTimestamps.current.push(now);
+
         const userLang = navigator.language || 'it';
-        const results = await getSearchSuggestions(query, userLang);
+        const results = await getSearchSuggestions(trimmedQuery, userLang);
         setSuggestions(results);
         setShowSuggestions(true);
       } else {
@@ -418,7 +450,7 @@ export default function App() {
       }
     };
 
-    const debounceTimer = setTimeout(fetchSuggestions, 300);
+    const debounceTimer = setTimeout(fetchSuggestions, 1000);
     return () => clearTimeout(debounceTimer);
   }, [query]);
 
@@ -551,6 +583,15 @@ export default function App() {
     if (appMode === 'ai') {
       try {
         finalQuery = await getMostImportantWork(rawQuery, lang);
+      } catch (e) {
+        console.error("AI Transformation failed:", e);
+        finalQuery = rawQuery;
+      }
+    }
+
+    if (appMode === 'haikuPoesia') {
+      try {
+        finalQuery = await getHaikuPoesia(rawQuery, lang);
       } catch (e) {
         console.error("AI Transformation failed:", e);
         finalQuery = rawQuery;
@@ -1088,8 +1129,59 @@ export default function App() {
 
                     <div className="flex flex-col space-y-1 pt-2 border-t border-gray-100">
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Output</label>
-                      <div className="w-full p-2 text-sm bg-white border border-gray-200 rounded-lg min-h-[40px] flex items-center font-mono text-blue-600 font-bold">
+                      <div className="w-full p-2 text-sm bg-white border border-gray-200 rounded-lg min-h-[40px] flex items-center font-mono text-blue-600 font-bold text-center justify-center">
                         {magnumOpusOutput || '---'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    setAppMode('haikuPoesia');
+                  }}
+                  className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between group ${
+                    appMode === 'haikuPoesia' 
+                      ? 'border-[#1a73e8] bg-blue-50 text-[#1a73e8]' 
+                      : 'border-gray-100 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-left">
+                    <p className="font-bold">Prompt AI: Haiku Poesia</p>
+                    <p className="text-xs text-gray-500 group-hover:text-gray-400">Riceve la parola sotto forma di poesia acrostica</p>
+                  </div>
+                  {appMode === 'haikuPoesia' && <div className="w-4 h-4 bg-[#1a73e8] rounded-full shadow-[0_0_8px_rgba(26,115,232,0.6)]" />}
+                </button>
+
+                {appMode === 'haikuPoesia' && (
+                  <div className="p-4 bg-gray-50 rounded-xl space-y-3 border border-gray-200">
+                    <div className="flex flex-col space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Input</label>
+                      <input 
+                        type="text" 
+                        value={haikuInput}
+                        onChange={(e) => setHaikuInput(e.target.value)}
+                        placeholder="Testo per la poesia..."
+                        className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      />
+                    </div>
+                    
+                    <button
+                      onClick={handleTestHaiku}
+                      disabled={isTestLoading || !haikuInput.trim()}
+                      className={`w-full py-2 px-4 rounded-lg text-sm font-bold transition-all shadow-sm ${
+                        isTestLoading || !haikuInput.trim()
+                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          : 'bg-amber-500 text-white hover:bg-amber-600 active:scale-95'
+                      }`}
+                    >
+                      {isTestLoading ? 'ELABORAZIONE...' : 'TEST'}
+                    </button>
+
+                    <div className="flex flex-col space-y-1 pt-2 border-t border-gray-100">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Output</label>
+                      <div className="w-full p-2 text-sm bg-white border border-gray-200 rounded-lg min-h-[40px] flex items-center text-indigo-600 font-bold text-center justify-center">
+                        {haikuOutput || '---'}
                       </div>
                     </div>
                   </div>

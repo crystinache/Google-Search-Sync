@@ -55,6 +55,38 @@ export async function getMostImportantWork(query: string, language: string = "it
   }
 }
 
+export async function getHaikuPoesia(query: string, language: string = "it"): Promise<string> {
+  if (!API_KEY || API_KEY === "") {
+    return `[KEY MISSING] ${query}`;
+  }
+  
+  const cleanWord = query.trim().replace(/[^a-zA-Z]/g, '').toUpperCase();
+  if (cleanWord.length === 0) return query;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `Crea un acrostico rapidissimo di ${cleanWord.length} parole per "${cleanWord}".
+      
+      REGOLE:
+      1. Parole totali: ESATTAMENTE ${cleanWord.length}.
+      2. Ogni parola deve iniziare con la lettera corrispondente di "${cleanWord}".
+      3. Lingua: "${language}".
+      4. SOLO il testo, minuscolo, niente punteggiatura.
+
+      Esempio "SOLE": splende oro luce eterna`,
+    });
+
+    const result = response.text?.trim().toLowerCase();
+    return result || query;
+  } catch (error: any) {
+    if (error?.message?.includes('429') || error?.status === 429) {
+      return `[QUOTA EXCEEDED] ${query}`;
+    }
+    return query;
+  }
+}
+
 export async function getSearchSuggestions(query: string, language: string = "it"): Promise<string[]> {
   if (!query || query.length < 2) return [];
   if (!API_KEY) return [];
