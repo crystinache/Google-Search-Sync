@@ -83,7 +83,7 @@ export default function App() {
   const [pendingData, setPendingData] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [appMode, setAppMode] = useState<'mirror' | 'ai' | 'haikuPoesia' | 'typing' | 'blackScreenPeek'>('mirror');
+  const [appMode, setAppMode] = useState<'mirror' | 'ai' | 'haikuPoesia' | 'lettersToNumbers' | 'typing' | 'blackScreenPeek'>('mirror');
   const [showSecretMenu, setShowSecretMenu] = useState(false);
   const [searchType, setSearchType] = useState<'web' | 'images'>('web');
   const [siteMode, setSiteMode] = useState<'google' | 'wikipedia'>('google');
@@ -113,6 +113,8 @@ export default function App() {
   const [magnumOpusOutput, setMagnumOpusOutput] = useState('');
   const [haikuInput, setHaikuInput] = useState('');
   const [haikuOutput, setHaikuOutput] = useState('');
+  const [ltnInput, setLtnInput] = useState('');
+  const [ltnOutput, setLtnOutput] = useState('');
   const [isTestLoading, setIsTestLoading] = useState(false);
 
   const handleTestMagnumOpus = async () => {
@@ -139,6 +141,27 @@ export default function App() {
     } finally {
       setIsTestLoading(false);
     }
+  };
+
+  const transformToNumbers = (text: string): string => {
+    return text
+      .toUpperCase()
+      .split('')
+      .map(char => {
+        const code = char.charCodeAt(0);
+        if (code >= 65 && code <= 90) {
+          return (code - 64).toString();
+        }
+        return null;
+      })
+      .filter(n => n !== null)
+      .join(' ');
+  };
+
+  const handleTestLtn = () => {
+    if (!ltnInput.trim()) return;
+    const result = transformToNumbers(ltnInput);
+    setLtnOutput(result);
   };
 
   const [lang, setLang] = useState<'it' | 'ro' | 'en'>(() => {
@@ -596,6 +619,10 @@ export default function App() {
         console.error("AI Transformation failed:", e);
         finalQuery = rawQuery;
       }
+    }
+    
+    if (appMode === 'lettersToNumbers') {
+      finalQuery = transformToNumbers(rawQuery);
     }
 
     if (appMode === 'blackScreenPeek') {
@@ -1139,6 +1166,7 @@ export default function App() {
                 <button
                   onClick={() => {
                     setAppMode('haikuPoesia');
+                    setShowSecretMenu(false);
                   }}
                   className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between group ${
                     appMode === 'haikuPoesia' 
@@ -1152,6 +1180,58 @@ export default function App() {
                   </div>
                   {appMode === 'haikuPoesia' && <div className="w-4 h-4 bg-[#1a73e8] rounded-full shadow-[0_0_8px_rgba(26,115,232,0.6)]" />}
                 </button>
+
+                <button
+                  onClick={() => {
+                    setAppMode('lettersToNumbers');
+                    setShowSecretMenu(false);
+                  }}
+                  className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between group ${
+                    appMode === 'lettersToNumbers' 
+                      ? 'border-[#1a73e8] bg-blue-50 text-[#1a73e8]' 
+                      : 'border-gray-100 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-left">
+                    <p className="font-bold">Letters to Numbers</p>
+                    <p className="text-xs text-gray-500 group-hover:text-gray-400">Trasforma le lettere in numeri (A=1, B=2...)</p>
+                  </div>
+                  {appMode === 'lettersToNumbers' && <div className="w-4 h-4 bg-[#1a73e8] rounded-full shadow-[0_0_8px_rgba(26,115,232,0.6)]" />}
+                </button>
+
+                {appMode === 'lettersToNumbers' && (
+                  <div className="p-4 bg-gray-50 rounded-xl space-y-3 border border-gray-200">
+                    <div className="flex flex-col space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Input</label>
+                      <input 
+                        type="text" 
+                        value={ltnInput}
+                        onChange={(e) => setLtnInput(e.target.value)}
+                        placeholder="Parola da testare..."
+                        className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      />
+                    </div>
+                    
+                    <button
+                      onClick={handleTestLtn}
+                      disabled={!ltnInput.trim()}
+                      className={`w-full py-2 px-4 rounded-lg text-sm font-bold transition-all shadow-sm ${
+                        !ltnInput.trim()
+                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          : 'bg-green-500 text-white hover:bg-green-600 active:scale-95'
+                      }`}
+                    >
+                      TEST
+                    </button>
+
+                    <div className="flex flex-col space-y-1 pt-2 border-t border-gray-100">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Output</label>
+                      <div className="w-full p-2 text-sm bg-white border border-gray-200 rounded-lg min-h-[40px] flex items-center text-green-600 font-bold text-center justify-center font-mono">
+                        {ltnOutput || '---'}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {appMode === 'haikuPoesia' && (
                   <div className="p-4 bg-gray-50 rounded-xl space-y-3 border border-gray-200">
