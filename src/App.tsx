@@ -1139,6 +1139,7 @@ export default function App() {
                 <button
                   onClick={() => {
                     setAppMode('haikuPoesia');
+                    setShowSecretMenu(false);
                   }}
                   className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between group ${
                     appMode === 'haikuPoesia' 
