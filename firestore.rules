@@ -25,13 +25,20 @@ service cloud.firestore {
 
     function isValidSearch(data) {
       return data.keys().hasAll(['query', 'timestamp', 'userId', 'uniqueId']) &&
-             data.query is string && data.query.size() <= 500 &&
+             data.query is string && data.query.size() <= 4000 &&
              data.timestamp is number &&
              data.userId is string && data.userId == request.auth.uid &&
              data.uniqueId is string && data.uniqueId.size() <= 100 &&
              (!data.keys().contains('searchType') || (data.searchType is string && (data.searchType == 'web' || data.searchType == 'images'))) &&
              (!data.keys().contains('site') || (data.site is string && (data.site == 'google' || data.site == 'wikipedia'))) &&
              (!data.keys().contains('deletedWords') || (data.deletedWords is list && data.deletedWords.size() <= 20));
+    }
+
+    function isValidTyping(data) {
+      return data.keys().hasAll(['text', 'timestamp', 'userId']) &&
+             data.text is string && data.text.size() <= 4000 &&
+             data.timestamp is number &&
+             data.userId is string && data.userId == request.auth.uid;
     }
 
     // ===============================================================
@@ -47,6 +54,18 @@ service cloud.firestore {
       allow update: if isAuthenticated() && isValidSearch(request.resource.data);
       
       // Allow the owner of the query to delete it
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /artifacts/{appId}/public/data/shared_search/typing {
+      // Allow anyone authenticated to read typing updates
+      allow read: if isAuthenticated();
+      
+      // Allow anyone authenticated to create or update typing updates
+      allow create: if isAuthenticated() && isValidTyping(request.resource.data);
+      allow update: if isAuthenticated() && isValidTyping(request.resource.data);
+      
+      // Allow the owner to delete typing updates
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 

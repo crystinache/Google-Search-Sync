@@ -415,7 +415,6 @@ export default function App() {
   }, [syncMessage]);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const suggestionRequestTimestamps = useRef<number[]>([]);
   const lastRedirectId = useRef<string | null>(null);
   const lastHandledSyncId = useRef<string | null>(null);
   const isInitialSnapshot = useRef(true);
@@ -445,37 +444,28 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    let active = true;
     const fetchSuggestions = async () => {
       const trimmedQuery = query.trim();
-      if (trimmedQuery.length >= 3) {
-        // Rate limiting check: max 3 requests per minute
-        const now = Date.now();
-        const oneMinuteAgo = now - 60000;
-        
-        // Clean up old timestamps
-        suggestionRequestTimestamps.current = suggestionRequestTimestamps.current.filter(ts => ts > oneMinuteAgo);
-        
-        if (suggestionRequestTimestamps.current.length >= 3) {
-          console.warn("Suggestion rate limit reached. Max 3 requests per minute.");
-          return;
+      if (trimmedQuery.length > 0) {
+        const results = await getSearchSuggestions(trimmedQuery, lang);
+        if (active) {
+          setSuggestions(results);
+          setShowSuggestions(true);
         }
-
-        // Record the request timestamp
-        suggestionRequestTimestamps.current.push(now);
-
-        const userLang = navigator.language || 'it';
-        const results = await getSearchSuggestions(trimmedQuery, userLang);
-        setSuggestions(results);
-        setShowSuggestions(true);
       } else {
-        setSuggestions([]);
-        setShowSuggestions(false);
+        if (active) {
+          setSuggestions([]);
+          setShowSuggestions(false);
+        }
       }
     };
 
-    const debounceTimer = setTimeout(fetchSuggestions, 1000);
-    return () => clearTimeout(debounceTimer);
-  }, [query]);
+    fetchSuggestions();
+    return () => {
+      active = false;
+    };
+  }, [query, lang]);
 
   useEffect(() => {
     if (!isAuthReady || !user) return;
@@ -663,144 +653,201 @@ export default function App() {
     }
   };
 
-  if (siteMode === 'wikipedia') {
-    return (
-      <div className="bg-white min-h-screen flex flex-col font-sans antialiased text-gray-900">
-        <header className="pt-10 pb-6 flex flex-col items-center">
-          <div className="flex flex-col items-center text-center px-4">
-            <div className="flex items-center">
-              <img 
-                src="https://i.imgur.com/pDq2xEx.png" 
-                alt="Wikipedia" 
-                className="w-14 h-14 mr-1 object-contain"
-                referrerPolicy="no-referrer"
-              />
-              <div className="flex flex-col items-center">
-                <div className="flex items-baseline font-serif tracking-[0.10em] text-gray-900">
-                  <span className="text-4xl leading-none">W</span>
-                  <span className="text-2xl leading-none">IKIPEDI</span>
-                  <span className="text-4xl leading-none">A</span>
+  return (
+    <>
+      {siteMode === 'wikipedia' ? (
+        <div className="bg-white min-h-screen flex flex-col font-sans antialiased text-gray-900">
+          <header className="pt-10 pb-6 flex flex-col items-center relative">
+            {appMode === 'typing' && (
+              <div className="absolute right-6 top-6 flex items-center space-x-2 bg-gray-50 border border-gray-200 py-1 px-2.5 rounded-full shadow-sm text-xs text-gray-500 font-medium select-none pointer-events-none">
+                <span>Real time typing live</span>
+                <div className="w-2 h-2 bg-[#36c] rounded-full animate-pulse shadow-[0_0_6px_rgba(54,102,188,0.6)]" />
+              </div>
+            )}
+
+            <div className="flex flex-col items-center text-center px-4">
+              <div className="flex items-center">
+                <img 
+                  src="https://i.imgur.com/pDq2xEx.png" 
+                  alt="Wikipedia" 
+                  className="w-14 h-14 mr-1 object-contain"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="flex flex-col items-center">
+                  <div className="flex items-baseline font-serif tracking-[0.10em] text-gray-900">
+                    <span className="text-4xl leading-none">W</span>
+                    <span className="text-2xl leading-none">IKIPEDI</span>
+                    <span className="text-4xl leading-none">A</span>
+                  </div>
+                  <div className="text-[10px] italic text-gray-600 mt-1 tracking-widest uppercase">The Free Encyclopedia</div>
                 </div>
-                <div className="text-[10px] italic text-gray-600 mt-1 tracking-widest uppercase">The Free Encyclopedia</div>
               </div>
             </div>
-          </div>
-        </header>
+          </header>
 
-        <main className="flex-grow flex flex-col items-center px-4">
-          <div className="w-full max-w-xl flex items-stretch h-10 border border-gray-400 rounded-sm overflow-hidden focus-within:border-blue-500 shadow-sm">
-            <input 
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSearch(query);
-              }}
-              className="flex-grow px-3 outline-none text-base"
-            />
-            <div className="flex items-center px-2 border-l border-gray-300 bg-gray-50 text-gray-600 text-sm cursor-pointer hover:bg-gray-100">
-              {t('langCode')} <span className="ml-1 text-[10px]">▼</span>
-            </div>
-            <button 
-              onClick={() => handleSearch(query)}
-              className="bg-[#36c] hover:bg-[#447ff5] px-4 flex items-center justify-center transition-colors"
-            >
-              <Search className="w-5 h-5 text-white" />
-            </button>
-          </div>
+          <main className="flex-grow flex flex-col items-center px-4">
+            <div className="w-full max-w-xl relative">
+              <div className="flex items-stretch h-10 border border-gray-400 rounded-sm overflow-hidden focus-within:border-blue-500 shadow-sm bg-white">
+                <input 
+                  type="text"
+                  value={query}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setQuery(val);
+                    emitTyping(val);
+                  }}
+                  onFocus={() => {
+                    setIsSearchActive(true);
+                    if (suggestions.length > 0) setShowSuggestions(true);
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setIsSearchActive(false);
+                      setShowSuggestions(false);
+                    }, 200);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearch(query);
+                      setShowSuggestions(false);
+                    }
+                  }}
+                  className="flex-grow px-3 outline-none text-base"
+                />
+                <div className="flex items-center px-2 border-l border-gray-300 bg-gray-50 text-gray-600 text-sm cursor-pointer hover:bg-gray-100">
+                  {t('langCode')} <span className="ml-1 text-[10px]">▼</span>
+                </div>
+                <button 
+                  onClick={() => {
+                    handleSearch(query);
+                    setShowSuggestions(false);
+                  }}
+                  className="bg-[#36c] hover:bg-[#447ff5] px-4 flex items-center justify-center transition-colors"
+                >
+                  <Search className="w-5 h-5 text-white" />
+                </button>
+              </div>
 
-          <div className="mt-8 grid grid-cols-3 gap-x-12 gap-y-6 text-center max-w-2xl px-4">
-            <div className="flex flex-col">
-              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Italiano</span>
-              <span className="text-xs text-gray-500">1.800.000+ {t('articles')}</span>
+              {/* WIKIPEDIA SUGGESTIONS DROPDOWN */}
+              <AnimatePresence>
+                {isSearchActive && query.trim() !== "" && suggestions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    className="absolute left-0 right-0 border border-gray-300 border-t-0 z-50 overflow-hidden bg-white shadow-lg rounded-b-sm"
+                  >
+                    <div className="py-1">
+                      {suggestions.map((suggestion, index) => (
+                        <div
+                          key={`wiki-sugg-${index}`}
+                          className="px-3 py-2.5 cursor-pointer flex items-center space-x-3 text-[14px] text-gray-800 hover:bg-gray-100 font-sans transition-colors"
+                          onClick={() => {
+                            setQuery(suggestion);
+                            emitTyping(suggestion);
+                            setShowSuggestions(false);
+                            setTimeout(() => handleSearch(suggestion), 100);
+                          }}
+                        >
+                          <Search className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium text-gray-900">{suggestion}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            <div className="flex flex-col">
-              <span className="text-blue-700 font-medium hover:underline cursor-pointer">English</span>
-              <span className="text-xs text-gray-500">6.000.000+ {t('articles')}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Română</span>
-              <span className="text-xs text-gray-500">400.000+ {t('articles')}</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Deutsch</span>
-              <span className="text-xs text-gray-500">2.800.000+ Artikel</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Français</span>
-              <span className="text-xs text-gray-500">2.500.000+ articles</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Español</span>
-              <span className="text-xs text-gray-500">1.800.000+ artículos</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Русский</span>
-              <span className="text-xs text-gray-500">2.000.000+ статей</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Slovenščina</span>
-              <span className="text-xs text-gray-500">180.000+ člankov</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-blue-700 font-medium hover:underline cursor-pointer">Nederlands</span>
-              <span className="text-xs text-gray-500">2.100.000+ artikelen</span>
-            </div>
-          </div>
 
-          <div className="mt-10 w-full max-w-xl border border-gray-300 p-2 text-center text-blue-700 font-medium hover:bg-gray-50 cursor-pointer rounded">
-             {t('readInYourLang')} <span className="text-xs">▼</span>
-          </div>
-
-          <div className="mt-4 mb-12 w-full max-w-xl grid grid-cols-2 gap-x-12 text-sm text-blue-700 px-4">
-            <div className="flex flex-col space-y-1.5 items-start">
-              <span className="hover:underline cursor-pointer">Polski</span>
-              <span className="hover:underline cursor-pointer">Português</span>
-              <span className="hover:underline cursor-pointer">Русский</span>
-              <span className="hover:underline cursor-pointer">日本語</span>
-              <span className="hover:underline cursor-pointer">中文</span>
-              <span className="hover:underline cursor-pointer">Tiếng Việt</span>
-              <span className="hover:underline cursor-pointer">Svenska</span>
-              <span className="hover:underline cursor-pointer">Nederlands</span>
-              <span className="hover:underline cursor-pointer">한국어</span>
-              <span className="hover:underline cursor-pointer">Català</span>
-              <span className="hover:underline cursor-pointer">العربية</span>
+            <div className="mt-8 grid grid-cols-3 gap-x-12 gap-y-6 text-center max-w-2xl px-4">
+              <div className="flex flex-col">
+                <span className="text-blue-700 font-medium hover:underline cursor-pointer">Italiano</span>
+                <span className="text-xs text-gray-500">1.800.000+ {t('articles')}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-blue-700 font-medium hover:underline cursor-pointer">English</span>
+                <span className="text-xs text-gray-500">6.000.000+ {t('articles')}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-blue-700 font-medium hover:underline cursor-pointer">Română</span>
+                <span className="text-xs text-gray-500">400.000+ {t('articles')}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-blue-700 font-medium hover:underline cursor-pointer">Deutsch</span>
+                <span className="text-xs text-gray-500">2.800.000+ Artikel</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-blue-700 font-medium hover:underline cursor-pointer">Français</span>
+                <span className="text-xs text-gray-500">2.500.000+ articles</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-blue-700 font-medium hover:underline cursor-pointer">Español</span>
+                <span className="text-xs text-gray-500">1.800.000+ artículos</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-blue-700 font-medium hover:underline cursor-pointer">Русский</span>
+                <span className="text-xs text-gray-500">2.000.000+ статей</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-blue-700 font-medium hover:underline cursor-pointer">Slovenščina</span>
+                <span className="text-xs text-gray-500">180.000+ člankov</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-blue-700 font-medium hover:underline cursor-pointer">Nederlands</span>
+                <span className="text-xs text-gray-500">2.100.000+ artikelen</span>
+              </div>
             </div>
-            <div className="flex flex-col space-y-1.5 items-start">
-              <span className="hover:underline cursor-pointer">Norsk (Bokmål)</span>
-              <span className="hover:underline cursor-pointer">Suomi</span>
-              <span className="hover:underline cursor-pointer">Magyar</span>
-              <span className="hover:underline cursor-pointer">Čeština</span>
-              <span className="hover:underline cursor-pointer">Türkçe</span>
-              <span className="hover:underline cursor-pointer">Română</span>
-              <span className="hover:underline cursor-pointer">Simple English</span>
-              <span className="hover:underline cursor-pointer">Esperanto</span>
-              <span className="hover:underline cursor-pointer">Српски / Srpski</span>
-              <span className="hover:underline cursor-pointer">Dansk</span>
-              <span className="hover:underline cursor-pointer">עברית</span>
+
+            <div className="mt-10 w-full max-w-xl border border-gray-300 p-2 text-center text-blue-700 font-medium hover:bg-gray-50 cursor-pointer rounded">
+               {t('readInYourLang')} <span className="text-xs">▼</span>
             </div>
-          </div>
-        </main>
 
-        <footer className="w-full flex justify-center py-6 border-t border-gray-200">
-          <div className="flex space-x-6 text-xs text-blue-700">
-            <button 
-              onDoubleClick={() => setSiteMode('google')}
-              className="hover:underline focus:outline-none text-gray-600"
-            >
-              {t('privacy')}
-            </button>
-            <a href="#" className="hover:underline">{t('terms')}</a>
-          </div>
-        </footer>
-      </div>
-    );
-  }
+            <div className="mt-4 mb-12 w-full max-w-xl grid grid-cols-2 gap-x-12 text-sm text-blue-700 px-4">
+              <div className="flex flex-col space-y-1.5 items-start">
+                <span className="hover:underline cursor-pointer">Polski</span>
+                <span className="hover:underline cursor-pointer">Português</span>
+                <span className="hover:underline cursor-pointer">Русский</span>
+                <span className="hover:underline cursor-pointer">日本語</span>
+                <span className="hover:underline cursor-pointer">中文</span>
+                <span className="hover:underline cursor-pointer">Tiếng Việt</span>
+                <span className="hover:underline cursor-pointer">Svenska</span>
+                <span className="hover:underline cursor-pointer">Nederlands</span>
+                <span className="hover:underline cursor-pointer">한국어</span>
+                <span className="hover:underline cursor-pointer">Català</span>
+                <span className="hover:underline cursor-pointer">العربية</span>
+              </div>
+              <div className="flex flex-col space-y-1.5 items-start">
+                <span className="hover:underline cursor-pointer">Norsk (Bokmål)</span>
+                <span className="hover:underline cursor-pointer">Suomi</span>
+                <span className="hover:underline cursor-pointer">Magyar</span>
+                <span className="hover:underline cursor-pointer">Čeština</span>
+                <span className="hover:underline cursor-pointer">Türkçe</span>
+                <span className="hover:underline cursor-pointer">Română</span>
+                <span className="hover:underline cursor-pointer">Simple English</span>
+                <span className="hover:underline cursor-pointer">Esperanto</span>
+                <span className="hover:underline cursor-pointer">Српски / Srpski</span>
+                <span className="hover:underline cursor-pointer">Dansk</span>
+                <span className="hover:underline cursor-pointer">עברית</span>
+              </div>
+            </div>
+          </main>
 
-  return (
-    <div className={`min-h-screen flex flex-col font-sans antialiased overflow-x-hidden transition-colors duration-300 ${
-      isDarkMode ? 'bg-[#202124] text-[#e8eaed]' : 'bg-white text-gray-900'
-    }`}>
+          <footer className="w-full flex justify-center py-6 border-t border-gray-200">
+            <div className="flex space-x-6 text-xs text-blue-700">
+              <button 
+                onDoubleClick={() => setSiteMode('google')}
+                className="hover:underline focus:outline-none text-gray-600"
+              >
+                {t('privacy')}
+              </button>
+              <a href="#" className="hover:underline">{t('terms')}</a>
+            </div>
+          </footer>
+        </div>
+      ) : (
+        <div className={`min-h-screen flex flex-col font-sans antialiased overflow-x-hidden transition-colors duration-300 ${
+          isDarkMode ? 'bg-[#202124] text-[#e8eaed]' : 'bg-white text-gray-900'
+        }`}>
       {/* HEADER */}
       <AnimatePresence>
         {!isSearchActive && (
@@ -1068,6 +1115,8 @@ export default function App() {
           </motion.footer>
         )}
       </AnimatePresence>
+        </div>
+      )}
 
       {/* SECRET MENU */}
       <AnimatePresence>
@@ -1492,6 +1541,6 @@ export default function App() {
           padding-bottom: ${isSearchActive ? '0' : '56px'};
         }
       `}</style>
-    </div>
+    </>
   );
 }

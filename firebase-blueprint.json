@@ -42,12 +42,36 @@
         }
       },
       "required": ["query", "timestamp", "userId", "uniqueId", "searchType"]
+    },
+    "RealTimeTyping": {
+      "title": "RealTimeTyping",
+      "description": "Information about what a user is typing in real time.",
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "The text currently input in the search bar."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the typing user."
+        },
+        "timestamp": {
+          "type": "number",
+          "description": "The timestamp of typing update."
+        }
+      },
+      "required": ["text", "userId", "timestamp"]
     }
   },
   "firestore": {
     "/artifacts/{appId}/public/data/shared_search/latest_query": {
       "schema": "SharedSearch",
       "description": "The latest shared search query."
+    },
+    "/artifacts/{appId}/public/data/shared_search/typing": {
+      "schema": "RealTimeTyping",
+      "description": "The real-time typing data."
     }
   }
 }

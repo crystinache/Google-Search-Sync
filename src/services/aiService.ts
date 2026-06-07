@@ -88,24 +88,21 @@ export async function getHaikuPoesia(query: string, language: string = "it"): Pr
 }
 
 export async function getSearchSuggestions(query: string, language: string = "it"): Promise<string[]> {
-  if (!query || query.length < 2) return [];
-  if (!API_KEY) return [];
+  if (!query || query.trim() === "") return [];
   
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Fornisci 5 suggerimenti di ricerca popolari rigorosamente nella lingua: "${language}" che iniziano con o sono altamente rilevanti per: "${query}". 
-      I suggerimenti DEVONO essere query di ricerca naturali per una persona che parla "${language}".
-      Restituisci SOLO un array JSON di stringhe. Nessun testo extra, nessun blocco di codice markdown.`,
-      config: {
-        responseMimeType: "application/json",
-      }
-    });
-
-    const result = response.text?.trim();
-    return JSON.parse(result || "[]");
+    const url = `https://${language}.wikipedia.org/w/api.php?action=opensearch&format=json&origin=*&search=${encodeURIComponent(query)}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Wikipedia responses not ok: ${response.status}`);
+    }
+    const data = await response.json();
+    if (Array.isArray(data) && Array.isArray(data[1])) {
+      return data[1].map((s: string) => s.toLowerCase());
+    }
+    return [];
   } catch (error) {
-    console.error("AI Suggestions Error:", error);
+    console.error("Wikipedia OpenSearch error:", error);
     return [];
   }
 }
