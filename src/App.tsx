@@ -658,13 +658,6 @@ export default function App() {
       {siteMode === 'wikipedia' ? (
         <div className="bg-white min-h-screen flex flex-col font-sans antialiased text-gray-900">
           <header className="pt-10 pb-6 flex flex-col items-center relative">
-            {appMode === 'typing' && (
-              <div className="absolute right-6 top-6 flex items-center space-x-2 bg-gray-50 border border-gray-200 py-1 px-2.5 rounded-full shadow-sm text-xs text-gray-500 font-medium select-none pointer-events-none">
-                <span>Real time typing live</span>
-                <div className="w-2 h-2 bg-[#36c] rounded-full animate-pulse shadow-[0_0_6px_rgba(54,102,188,0.6)]" />
-              </div>
-            )}
-
             <div className="flex flex-col items-center text-center px-4">
               <div className="flex items-center">
                 <img 
