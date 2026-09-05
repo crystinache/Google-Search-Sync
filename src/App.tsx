@@ -609,7 +609,7 @@ export default function App() {
     } else {
       const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
       localUrl = searchType === 'images' 
-        ? `https://www.google.${googleDomain}/search?q=${encodedQuery}&tbm=isch` 
+        ? `https://www.google.${googleDomain}/search?q=${encodedQuery}&tbm=isch&udm=2` 
         : `https://www.google.${googleDomain}/search?q=${encodedQuery}`;
     }
     
@@ -716,7 +716,7 @@ export default function App() {
     } else {
       const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
       localUrl = searchType === 'images'
-        ? `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}&tbm=isch`
+        ? `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}&tbm=isch&udm=2`
         : `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}`;
     }
     
