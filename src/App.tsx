@@ -201,6 +201,54 @@ export default function App() {
     }
   };
 
+  const openYoutubeSong = (queryStr: string, inNewTab = false) => {
+    const trimmed = queryStr.trim();
+    const cleanTerm = trimmed.replace(/youtube/gi, '').trim() || trimmed;
+    const finalQuery = `${cleanTerm} Youtube`;
+    const encoded = encodeURIComponent(finalQuery);
+    const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
+    const webLuckyUrl = `https://www.google.${googleDomain}/search?q=${encoded}&btnI=1`;
+    
+    const ua = navigator.userAgent || '';
+    const isAndroid = /android/i.test(ua);
+    const isIOS = /iphone|ipad|ipod/i.test(ua);
+
+    triggerAudioReactivation();
+
+    if (isAndroid) {
+      // 1. First choice on Android: vnd.youtube scheme which instructs OS to open YouTube Native App
+      const vndAppUrl = `vnd.youtube://www.youtube.com/results?search_query=${encoded}`;
+      const intentUrl = `intent://www.youtube.com/results?search_query=${encoded}#Intent;package=com.google.android.youtube;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end;S.browser_fallback_url=${encodeURIComponent(webLuckyUrl)}`;
+      
+      const link = document.createElement('a');
+      link.href = intentUrl;
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else if (isIOS) {
+      // iOS: youtube:// URL Scheme
+      const iosAppUrl = `youtube://www.youtube.com/results?search_query=${encoded}`;
+      const link = document.createElement('a');
+      link.href = iosAppUrl;
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setTimeout(() => {
+        window.location.replace(webLuckyUrl);
+      }, 750);
+    } else {
+      // Desktop / other
+      if (inNewTab) {
+        window.open(webLuckyUrl, '_blank');
+      } else {
+        window.location.replace(webLuckyUrl);
+      }
+    }
+  };
+
   const [youtubeInput, setYoutubeInput] = useState('');
   const [youtubeOutput, setYoutubeOutput] = useState('');
 
@@ -213,12 +261,7 @@ export default function App() {
     if (!youtubeInput.trim()) return;
     const queryStr = `${youtubeInput.trim()} Youtube`;
     setYoutubeOutput(queryStr);
-    triggerAudioReactivation();
-    const encoded = encodeURIComponent(queryStr);
-    const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
-    // Using Google I'm Feeling Lucky with autoplay and audio unmuting flags
-    const luckyUrl = `https://www.google.${googleDomain}/search?q=${encoded}&btnI=1&autoplay=1&mute=0&muted=0&sound=1`;
-    window.open(luckyUrl, '_blank');
+    openYoutubeSong(queryStr, true);
   };
 
   const [lang, setLang] = useState<'it' | 'ro' | 'en'>(() => {
@@ -673,14 +716,7 @@ export default function App() {
     }
 
     if (appMode === 'youtubeSongVideo') {
-      const trimmed = rawQuery.trim();
-      finalQuery = trimmed ? `${trimmed} Youtube` : rawQuery;
-      triggerAudioReactivation();
-      const encodedFinalQuery = encodeURIComponent(finalQuery);
-      const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
-      const luckyUrl = `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}&btnI=1&autoplay=1&mute=0&muted=0&sound=1`;
-      
-      window.location.replace(luckyUrl);
+      openYoutubeSong(rawQuery, false);
       
       try {
         await deleteDoc(doc(db, SHARED_DOC_PATH));
