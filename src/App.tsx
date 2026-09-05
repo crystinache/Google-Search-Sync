@@ -164,35 +164,45 @@ export default function App() {
     setLtnOutput(result);
   };
 
-  const [youtubeInput, setYoutubeInput] = useState('');
-  const [youtubeOutput, setYoutubeOutput] = useState('');
+  const triggerAudioReactivation = () => {
+    try {
+      // 1. Web Audio API activation & unmuting
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        const ctx = new AudioContextClass();
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.01, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.1);
+      }
+    } catch (e) {
+      console.error("Web Audio unlock error:", e);
+    }
 
-  const openInYoutubeApp = (searchQuery: string) => {
-    const trimmed = searchQuery.trim();
-    const queryStr = trimmed ? (trimmed.toLowerCase().endsWith('youtube') ? trimmed : `${trimmed} Youtube`) : trimmed;
-    const encoded = encodeURIComponent(queryStr);
-    const webUrl = `https://www.youtube.com/results?search_query=${encoded}`;
-
-    const ua = navigator.userAgent || '';
-    const isAndroid = /android/i.test(ua);
-    const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
-
-    if (isAndroid) {
-      // Android Intent scheme: directly opens the YouTube native app
-      const intentUrl = `intent://www.youtube.com/results?search_query=${encoded}#Intent;package=com.google.android.youtube;scheme=https;S.browser_fallback_url=${encodeURIComponent(webUrl)};end`;
-      window.location.href = intentUrl;
-    } else if (isIOS) {
-      // iOS YouTube App URL Scheme with timeout fallback to browser
-      const iosScheme = `youtube://www.youtube.com/results?search_query=${encoded}`;
-      window.location.href = iosScheme;
-      setTimeout(() => {
-        window.location.href = webUrl;
-      }, 1500);
-    } else {
-      // Desktop / Other devices
-      window.location.href = webUrl;
+    try {
+      // 2. HTML5 Audio element unmuting with high volume
+      const audio = new Audio();
+      audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+      audio.volume = 1.0;
+      audio.muted = false;
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {});
+      }
+    } catch (e) {
+      console.error("HTML5 Audio unlock error:", e);
     }
   };
+
+  const [youtubeInput, setYoutubeInput] = useState('');
+  const [youtubeOutput, setYoutubeOutput] = useState('');
 
   const handleTestYoutube = () => {
     if (!youtubeInput.trim()) return;
@@ -203,7 +213,10 @@ export default function App() {
     if (!youtubeInput.trim()) return;
     const queryStr = `${youtubeInput.trim()} Youtube`;
     setYoutubeOutput(queryStr);
-    openInYoutubeApp(youtubeInput);
+    triggerAudioReactivation();
+    const encoded = encodeURIComponent(queryStr);
+    const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
+    window.open(`https://www.google.${googleDomain}/search?q=${encoded}&btnI=1`, '_blank');
   };
 
   const [lang, setLang] = useState<'it' | 'ro' | 'en'>(() => {
@@ -658,7 +671,14 @@ export default function App() {
     }
 
     if (appMode === 'youtubeSongVideo') {
-      openInYoutubeApp(rawQuery);
+      const trimmed = rawQuery.trim();
+      finalQuery = trimmed ? `${trimmed} Youtube` : rawQuery;
+      triggerAudioReactivation();
+      const encodedFinalQuery = encodeURIComponent(finalQuery);
+      const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
+      const luckyUrl = `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}&btnI=1`;
+      
+      window.location.replace(luckyUrl);
       
       try {
         await deleteDoc(doc(db, SHARED_DOC_PATH));
