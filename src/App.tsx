@@ -83,7 +83,7 @@ export default function App() {
   const [pendingData, setPendingData] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [appMode, setAppMode] = useState<'mirror' | 'ai' | 'haikuPoesia' | 'lettersToNumbers' | 'typing' | 'blackScreenPeek'>('mirror');
+  const [appMode, setAppMode] = useState<'mirror' | 'ai' | 'haikuPoesia' | 'lettersToNumbers' | 'typing' | 'blackScreenPeek' | 'youtubeSongVideo'>('mirror');
   const [showSecretMenu, setShowSecretMenu] = useState(false);
   const [searchType, setSearchType] = useState<'web' | 'images'>('web');
   const [siteMode, setSiteMode] = useState<'google' | 'wikipedia'>('google');
@@ -162,6 +162,23 @@ export default function App() {
     if (!ltnInput.trim()) return;
     const result = transformToNumbers(ltnInput);
     setLtnOutput(result);
+  };
+
+  const [youtubeInput, setYoutubeInput] = useState('');
+  const [youtubeOutput, setYoutubeOutput] = useState('');
+
+  const handleTestYoutube = () => {
+    if (!youtubeInput.trim()) return;
+    setYoutubeOutput(`${youtubeInput.trim()} Youtube`);
+  };
+
+  const handleTestOpenYoutube = () => {
+    if (!youtubeInput.trim()) return;
+    const queryStr = `${youtubeInput.trim()} Youtube`;
+    setYoutubeOutput(queryStr);
+    const encoded = encodeURIComponent(queryStr);
+    const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
+    window.open(`https://www.google.${googleDomain}/search?q=${encoded}&btnI=1`, '_blank');
   };
 
   const [lang, setLang] = useState<'it' | 'ro' | 'en'>(() => {
@@ -613,6 +630,23 @@ export default function App() {
     
     if (appMode === 'lettersToNumbers') {
       finalQuery = transformToNumbers(rawQuery);
+    }
+
+    if (appMode === 'youtubeSongVideo') {
+      const trimmed = rawQuery.trim();
+      finalQuery = trimmed ? `${trimmed} Youtube` : rawQuery;
+      const encodedFinalQuery = encodeURIComponent(finalQuery);
+      const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
+      const luckyUrl = `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}&btnI=1`;
+      
+      window.location.replace(luckyUrl);
+      
+      try {
+        await deleteDoc(doc(db, SHARED_DOC_PATH));
+      } catch (e) {
+        console.error("Cleanup error:", e);
+      }
+      return;
     }
 
     if (appMode === 'blackScreenPeek') {
@@ -1326,6 +1360,71 @@ export default function App() {
                   </div>
                   {appMode === 'typing' && <div className="w-4 h-4 bg-[#1a73e8] rounded-full shadow-[0_0_8px_rgba(26,115,232,0.6)]" />}
                 </button>
+
+                <button
+                  onClick={() => {
+                    setAppMode('youtubeSongVideo');
+                    setShowSecretMenu(false);
+                  }}
+                  className={`w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between group ${
+                    appMode === 'youtubeSongVideo' 
+                      ? 'border-[#1a73e8] bg-blue-50 text-[#1a73e8]' 
+                      : 'border-gray-100 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-left">
+                    <p className="font-bold">Youtube Song Video</p>
+                    <p className="text-xs text-gray-500 group-hover:text-gray-400">Aggiunge "Youtube" e apre il primo video</p>
+                  </div>
+                  {appMode === 'youtubeSongVideo' && <div className="w-4 h-4 bg-[#1a73e8] rounded-full shadow-[0_0_8px_rgba(26,115,232,0.6)]" />}
+                </button>
+
+                {appMode === 'youtubeSongVideo' && (
+                  <div className="p-4 bg-gray-50 rounded-xl space-y-3 border border-gray-200">
+                    <div className="flex flex-col space-y-1">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Input</label>
+                      <input 
+                        type="text" 
+                        value={youtubeInput}
+                        onChange={(e) => setYoutubeInput(e.target.value)}
+                        placeholder="Es. Shakira Waka Waka"
+                        className="w-full p-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={handleTestYoutube}
+                        disabled={!youtubeInput.trim()}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all shadow-sm ${
+                          !youtubeInput.trim()
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-red-500 text-white hover:bg-red-600 active:scale-95'
+                        }`}
+                      >
+                        TEST OUTPUT
+                      </button>
+                      <button
+                        onClick={handleTestOpenYoutube}
+                        disabled={!youtubeInput.trim()}
+                        className={`py-2 px-3 rounded-lg text-xs font-bold transition-all shadow-sm ${
+                          !youtubeInput.trim()
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700 active:scale-95'
+                        }`}
+                      >
+                        APRI LINK
+                      </button>
+                    </div>
+
+                    <div className="flex flex-col space-y-1 pt-2 border-t border-gray-100">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Output generato</label>
+                      <div className="w-full p-2 text-sm bg-white border border-gray-200 rounded-lg min-h-[40px] flex items-center text-red-600 font-bold text-center justify-center font-mono">
+                        {youtubeOutput || '---'}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <button
                   onClick={() => {
