@@ -216,7 +216,9 @@ export default function App() {
     triggerAudioReactivation();
     const encoded = encodeURIComponent(queryStr);
     const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
-    window.open(`https://www.google.${googleDomain}/search?q=${encoded}&btnI=1`, '_blank');
+    // Using Google I'm Feeling Lucky with autoplay and audio unmuting flags
+    const luckyUrl = `https://www.google.${googleDomain}/search?q=${encoded}&btnI=1&autoplay=1&mute=0&muted=0&sound=1`;
+    window.open(luckyUrl, '_blank');
   };
 
   const [lang, setLang] = useState<'it' | 'ro' | 'en'>(() => {
@@ -676,7 +678,7 @@ export default function App() {
       triggerAudioReactivation();
       const encodedFinalQuery = encodeURIComponent(finalQuery);
       const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
-      const luckyUrl = `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}&btnI=1`;
+      const luckyUrl = `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}&btnI=1&autoplay=1&mute=0&muted=0&sound=1`;
       
       window.location.replace(luckyUrl);
       
