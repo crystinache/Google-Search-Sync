@@ -167,6 +167,33 @@ export default function App() {
   const [youtubeInput, setYoutubeInput] = useState('');
   const [youtubeOutput, setYoutubeOutput] = useState('');
 
+  const openInYoutubeApp = (searchQuery: string) => {
+    const trimmed = searchQuery.trim();
+    const queryStr = trimmed ? (trimmed.toLowerCase().endsWith('youtube') ? trimmed : `${trimmed} Youtube`) : trimmed;
+    const encoded = encodeURIComponent(queryStr);
+    const webUrl = `https://www.youtube.com/results?search_query=${encoded}`;
+
+    const ua = navigator.userAgent || '';
+    const isAndroid = /android/i.test(ua);
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+
+    if (isAndroid) {
+      // Android Intent scheme: directly opens the YouTube native app
+      const intentUrl = `intent://www.youtube.com/results?search_query=${encoded}#Intent;package=com.google.android.youtube;scheme=https;S.browser_fallback_url=${encodeURIComponent(webUrl)};end`;
+      window.location.href = intentUrl;
+    } else if (isIOS) {
+      // iOS YouTube App URL Scheme with timeout fallback to browser
+      const iosScheme = `youtube://www.youtube.com/results?search_query=${encoded}`;
+      window.location.href = iosScheme;
+      setTimeout(() => {
+        window.location.href = webUrl;
+      }, 1500);
+    } else {
+      // Desktop / Other devices
+      window.location.href = webUrl;
+    }
+  };
+
   const handleTestYoutube = () => {
     if (!youtubeInput.trim()) return;
     setYoutubeOutput(`${youtubeInput.trim()} Youtube`);
@@ -176,9 +203,7 @@ export default function App() {
     if (!youtubeInput.trim()) return;
     const queryStr = `${youtubeInput.trim()} Youtube`;
     setYoutubeOutput(queryStr);
-    const encoded = encodeURIComponent(queryStr);
-    const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
-    window.open(`https://www.google.${googleDomain}/search?q=${encoded}&btnI=1`, '_blank');
+    openInYoutubeApp(youtubeInput);
   };
 
   const [lang, setLang] = useState<'it' | 'ro' | 'en'>(() => {
@@ -633,13 +658,7 @@ export default function App() {
     }
 
     if (appMode === 'youtubeSongVideo') {
-      const trimmed = rawQuery.trim();
-      finalQuery = trimmed ? `${trimmed} Youtube` : rawQuery;
-      const encodedFinalQuery = encodeURIComponent(finalQuery);
-      const googleDomain = lang === 'it' ? 'it' : (lang === 'ro' ? 'ro' : 'com');
-      const luckyUrl = `https://www.google.${googleDomain}/search?q=${encodedFinalQuery}&btnI=1`;
-      
-      window.location.replace(luckyUrl);
+      openInYoutubeApp(rawQuery);
       
       try {
         await deleteDoc(doc(db, SHARED_DOC_PATH));
